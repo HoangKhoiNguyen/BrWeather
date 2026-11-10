@@ -1,0 +1,33 @@
+# Secrets
+.env
+*.keystore
+google-services.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# Data and models (keep out of Git)
+data/
+data-pipeline/ml/models/*.pkl
+data-pipeline/ml/models/*.joblib
+
+# Java
+backend/target/
+*.class
+
+# Node / React Native
+node_modules/
+mobile/android/app/build/
+mobile/android/.gradle/
+mobile/ios/Pods/
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

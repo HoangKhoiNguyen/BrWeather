@@ -1,0 +1,20 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: brweather-backend
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:brweather}
+    username: ${POSTGRES_USER:brweather}
+    password: ${POSTGRES_PASSWORD:}
+
+brweather:
+  # Data older than this is shown as "stale" (tune after measuring source update frequency in week 1)
+  stale-after-hours: 3
+  # Alerts for the same event are sent at most once in this window
+  alert-dedup-minutes: 60
+  llm:
+    api-key: ${LLM_API_KEY:}
+    # When the key is empty, explanations use fixed templates
+    enabled: ${LLM_ENABLED:false}
