@@ -33,17 +33,9 @@ Lệnh này tự mở Metro (bộ phục vụ mã JavaScript), build và cài ap
 3. Vào **Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK**, chọn **JDK 21**.
 4. Chọn máy ảo trên thanh công cụ, bấm **Run ▶**.
 
-**Chỉ bấm Run, không cần tự chạy `npm start`** (cài một lần trong Android Studio):
+**Trên Windows chỉ cần bấm Run.** Bản debug tự gọi `scripts/start-metro.cmd` (task `startMetro` trong `android/app/build.gradle`): nếu Metro chưa chạy, nó mở Metro trong cửa sổ riêng "Metro - brWeather". Giữ cửa sổ đó mở trong lúc làm việc. Trên macOS/Linux vẫn chạy `npm start` như bước 1.
 
-1. **Run → Edit Configurations…** → chọn cấu hình **app**.
-2. Ở mục **Before launch**, bấm **+** → **Run External tool** → **+**, điền:
-   - Name: `Start Metro`
-   - Program: `$ProjectFileDir$\..\scripts\start-metro.cmd`
-   - Working directory: `$ProjectFileDir$\..`
-   - Bỏ tick **Open console for tool output**
-3. **OK**, rồi kéo `Start Metro` lên **trên** dòng *Gradle-aware Make*.
-
-Từ đó bấm **Run ▶**: Metro tự mở trong cửa sổ riêng nếu chưa chạy, máy ảo đang chọn tự khởi động, rồi app được cài và mở.
+Nếu mở app trên máy ảo mà thấy màn hình đỏ "Unable to load script", Metro đã bị tắt: bấm **Run** lại, hoặc chạy `scripts\start-metro.cmd`, rồi bấm **R** hai lần trên máy ảo.
 
 Sửa code trong `src/` rồi lưu, màn hình tự cập nhật (Fast Refresh). Chỉ cần build lại khi đổi phần native trong `android/` hoặc thêm thư viện native.
 

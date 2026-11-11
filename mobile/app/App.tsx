@@ -129,7 +129,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 6,
     borderRadius: 28,
-    backgroundColor: 'rgba(12,24,50,0.94)',
+    backgroundColor: '#0E1A34',
+    backgroundImage: 'linear-gradient(180deg, #182A50 0%, #0C162E 100%)',
+    // Cards with shadows are drawn on raised layers on Android; keep the tab bar above them
+    zIndex: 10,
+    elevation: 24,
     borderWidth: 1,
     borderColor: glass.border,
     boxShadow: '0 10px 30px rgba(0,0,0,0.35)',

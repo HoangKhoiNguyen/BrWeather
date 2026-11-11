@@ -117,3 +117,21 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+// Pressing Run in Android Studio is enough: debug builds start Metro (the JavaScript dev server)
+// in its own window if it is not running yet. Windows only; elsewhere run `npm start` yourself.
+def startMetro = tasks.register("startMetro") {
+    def isWindows = System.getProperty("os.name").toLowerCase().contains("windows")
+    def appDir = file("../..")
+    onlyIf { isWindows }
+    doLast {
+        // Output is discarded so the new Metro window does not keep the build waiting on its pipes
+        new ProcessBuilder("cmd", "/c", "scripts\\start-metro.cmd")
+            .directory(appDir)
+            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+            .redirectError(ProcessBuilder.Redirect.DISCARD)
+            .start()
+            .waitFor()
+    }
+}
+tasks.matching { it.name == "preDebugBuild" }.configureEach { dependsOn startMetro }
