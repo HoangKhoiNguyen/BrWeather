@@ -158,6 +158,7 @@ export function mockWeather(): Weather {
       humidityPct: 76,
       precipitationMm: 0,
       windKmh: 7.2,
+      windDirectionDeg: 45,
       uvIndex: 4,
       weatherCode: codeAt(now),
     },

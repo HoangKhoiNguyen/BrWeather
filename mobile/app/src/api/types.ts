@@ -65,6 +65,7 @@ export interface Weather {
     humidityPct: number | null;
     precipitationMm: number | null;
     windKmh: number | null;
+    windDirectionDeg: number | null;
     uvIndex: number | null;
     weatherCode: number | null;
   };
