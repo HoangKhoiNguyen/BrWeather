@@ -1,6 +1,6 @@
 # Môi trường chung của nhóm (C-03)
 
-Một máy luôn bật chạy `db` + `migrate` + `backend` + `pipeline` + `backup` bằng Docker Compose. Cả nhóm kết nối vào cùng một cơ sở dữ liệu và một API, nên dữ liệu PM2.5/thời tiết được thu liên tục, không phụ thuộc máy ai đang bật.
+Một VPS trên cloud chạy `db` + `migrate` + `backend` + `pipeline` + `backup` bằng Docker Compose. Cả nhóm kết nối vào cùng một cơ sở dữ liệu và một API, nên dữ liệu PM2.5/thời tiết được thu liên tục, không phụ thuộc máy ai đang bật.
 
 Điều kiện xong của C-03:
 
@@ -39,59 +39,71 @@ Log mỗi container giới hạn 3 × 10 MB, nên chạy lâu không làm đầy
 
 Hai việc dưới đây cần quyết định của nhóm hoặc tài khoản cá nhân, nên không làm sẵn trong repo được.
 
-### Việc 1 – Chọn máy chủ
+### Việc 1 – Máy chủ cloud (đã chọn 17/11/2026)
 
-| Phương án | Chi phí | Ưu | Nhược | Hợp khi |
-|---|---|---|---|---|
-| **A. Máy một thành viên + Tailscale** (khuyên dùng cho Sprint 1–3) | 0 đ | Dựng trong 1 giờ, không lộ cổng ra Internet | Máy đó phải luôn bật, không ngủ; tốn điện | Có một máy bàn/laptop cắm điện cả ngày |
-| **B. VPS miễn phí Oracle Cloud (Always Free) + Tailscale** | 0 đ (cần thẻ để đăng ký) | Chạy 24/7 thật, gần giống môi trường UAT ở C-07 | Đăng ký hay bị từ chối hoặc hết tài nguyên ở một số vùng; máy ARM | Muốn dùng luôn cho C-07 (HTTPS cho UAT) |
-| **C. VPS trả phí nhỏ** (khoảng 2 vCPU / 2–4 GB RAM) | Vài USD/tháng, tùy nhà cung cấp | Ổn định, ít rắc rối | Tốn tiền | Phương án B không đăng ký được |
+Nhóm dùng **một VPS trên cloud**, truy cập qua **Tailscale**. Thứ tự ưu tiên:
 
-Lưu ý:
+| Thứ tự | Phương án | Chi phí | Ghi chú |
+|---|---|---|---|
+| 1 | **Oracle Cloud Always Free**, máy `VM.Standard.A1.Flex` 2 OCPU / 12 GB RAM, Ubuntu 24.04, ổ 50 GB | 0 đ (cần thẻ để xác minh) | Từ giữa 2026 Always Free chỉ còn 2 OCPU + 12 GB cho A1; **không tạo máy vượt mức**, vì khi hết dùng thử máy vượt mức bị tắt. Vùng Singapore hay hết chỗ cho A1, thử lại vào lúc khác hoặc đổi availability domain. Máy ARM: các image `postgres:16`, `maven`, `eclipse-temurin`, `python:3.11-slim` đều có bản ARM. |
+| 2 | VPS trả phí nhỏ (2 vCPU, 2–4 GB RAM, Ubuntu, gần Việt Nam như Singapore) | Vài USD/tháng | Dùng khi Oracle không đăng ký được. 2 GB RAM thì thêm swap (bên dưới) vì lúc build backend Maven tốn bộ nhớ. |
 
-- **Tailscale**: gói Personal miễn phí cho mục đích phi thương mại, tối đa 6 người dùng, đủ cho nhóm 4 người. Mỗi thành viên cài Tailscale và đăng nhập vào cùng một mạng (tailnet). Máy chủ có một IP dạng `100.x.y.z` mà chỉ thành viên trong tailnet thấy.
-- **Oracle Always Free** từ giữa năm 2026 chỉ còn 2 OCPU + 12 GB RAM cho máy Ampere A1 (trước đây là 4 + 24), vẫn đủ cho brWeather. Không tạo máy vượt mức này, vì khi hết thời gian dùng thử, máy vượt mức sẽ bị tắt. Các image `postgres:16`, `maven`, `eclipse-temurin`, `python:3.11-slim` đều có bản ARM.
-- Máy chủ cần tối thiểu khoảng 2 GB RAM trống (lúc build backend Maven cần nhiều nhất) và 10 GB ổ đĩa.
-- Phương án A trên Windows: dùng Docker Desktop (WSL2), bật *Start Docker Desktop when you sign in*, tắt chế độ ngủ trong *Power settings*. Chạy các script `scripts/env/*.sh` bằng Git Bash hoặc trong WSL.
+**Tailscale** (gói Personal miễn phí, phi thương mại, tối đa 6 người dùng): mỗi thành viên cài và đăng nhập cùng một tailnet. VPS có IP `100.x.y.z` chỉ thành viên thấy. Nhờ vậy **không cần mở cổng 5432 hay 8080 ra Internet**.
 
-### Việc 2 – Khóa OpenAQ cho pipeline chung
+**Lưu ý bảo mật riêng cho VPS có IP công khai:**
 
-OpenAQ yêu cầu không chia sẻ khóa API, vì mỗi khóa có hạn mức riêng. Pipeline chung vẫn chỉ cần **một** khóa. Đề xuất:
+- Cổng do Docker mở (`ports:`) **đi vòng qua tường lửa `ufw`**: chặn bằng `ufw` không có tác dụng. Vì vậy trong `.env` của VPS đặt **cả** `DB_BIND_ADDR` **và** `API_BIND_ADDR` bằng IP Tailscale, không dùng `0.0.0.0`.
+- Tường lửa của nhà cung cấp (Oracle: *Security List* của subnet) chỉ mở cổng 22 (SSH). Khi Tailscale chạy ổn, có thể đóng cả cổng 22 và SSH qua Tailscale.
+- Đăng nhập SSH bằng khóa, tắt đăng nhập bằng mật khẩu.
+- Mở API ra Internet cho người thử UAT là việc của C-07 (HTTPS), không làm ở C-03.
 
-1. Chọn **một người** (gợi ý: người phụ trách máy chủ, hieund) dùng khóa **của chính mình** cho pipeline chung. Khóa chỉ nằm trong `.env` trên máy chủ, không gửi qua chat, không commit.
-2. Khi máy chủ chung đã chạy, các thành viên khác **tắt pipeline trên máy mình** (chạy `docker compose up -d db backend`, không chạy `pipeline`), đọc dữ liệu từ db chung, để không tốn hạn mức và không có hai nguồn dữ liệu lệch nhau.
-3. Ghi quyết định này vào biên bản Sprint Planning hoặc `docs/data-sources.md`.
+### Việc 2 – Khóa OpenAQ (đã chọn 17/11/2026)
+
+Pipeline chung dùng **một khóa OpenAQ nhóm đang có**. Cách giữ khóa:
+
+1. Khóa **chỉ** nằm trong file `.env` trên VPS (`OPENAQ_API_KEY=...`). Repo là public, nên tuyệt đối **không commit** khóa vào bất kỳ file nào. `.env` đã có trong `.gitignore`.
+2. Người giữ VPS dán khóa trực tiếp khi SSH vào máy, không gửi qua nhóm chat. Lỡ để lộ thì vào `explore.openaq.org/account` tạo khóa mới (rotate) và cập nhật `.env`, rồi chạy `scripts/env/up.sh`.
+3. OpenAQ yêu cầu không chia sẻ khóa vì mỗi khóa có hạn mức riêng. Vì vậy khi VPS đã chạy, các thành viên **không chạy pipeline bằng khóa này trên máy mình**: chạy `docker compose up -d db backend` hoặc đọc thẳng db chung. Ai cần gọi OpenAQ để thử (ví dụ `scripts/check_data_gate.ps1`) thì dùng khóa riêng của mình.
 
 ---
 
 ## Dựng máy chủ (người phụ trách làm một lần)
 
 ```bash
-# 1. Cài Docker (Linux: https://docs.docker.com/engine/install/) và Tailscale (https://tailscale.com/download)
-sudo tailscale up            # đăng nhập vào tailnet của nhóm
-tailscale ip -4              # ghi lại IP 100.x.y.z
+# 0. (VPS 2 GB RAM) thêm 2 GB swap để build backend không bị thiếu bộ nhớ
+sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+# 1. Cài Docker và Tailscale
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER && newgrp docker
+sudo systemctl enable docker          # Docker tự chạy khi VPS khởi động lại
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up                     # mở link hiện ra để đăng nhập tailnet của nhóm
+tailscale ip -4                       # ghi lại IP 100.x.y.z
 
 # 2. Lấy code
 git clone https://github.com/HoangKhoiNguyen/BrWeather.git && cd BrWeather
 
 # 3. Cấu hình
-cp .env.example .env
-#   - OPENAQ_API_KEY      = khóa của người phụ trách (Việc 2)
-#   - POSTGRES_PASSWORD   = mật khẩu mạnh: openssl rand -base64 24
-#   - DB_BIND_ADDR        = IP Tailscale ở bước 1 (để thành viên mở được db)
-#   - API_BIND_ADDR       = IP Tailscale (VPS) hoặc giữ 0.0.0.0 (máy trong mạng nhà)
+cp .env.example .env && nano .env
+#   OPENAQ_API_KEY    = khóa OpenAQ của nhóm (Việc 2)
+#   POSTGRES_PASSWORD = mật khẩu mạnh: openssl rand -base64 24
+#   DB_BIND_ADDR      = 100.x.y.z (IP Tailscale ở bước 1)
+#   API_BIND_ADDR     = 100.x.y.z
 
-# 4. Khởi động
+# 4. Khởi động (lần đầu build mất vài phút)
 scripts/env/up.sh
 
 # 5. Kiểm tra
 scripts/env/status.sh
-scripts/env/check-persistence.sh     # tiêu chí "không mất dữ liệu khi khởi động lại"
+scripts/env/check-persistence.sh      # tiêu chí "không mất dữ liệu khi khởi động lại"
+sudo reboot                           # thử thật: sau khi VPS lên lại, chạy status.sh, mọi thứ phải tự chạy
 ```
 
 `up.sh` từ chối chạy khi mật khẩu còn là `change-me`, và tự tạo volume `brweather_shared_pgdata` ở lần đầu.
 
-Docker tự khởi động khi máy bật lại (Linux: `sudo systemctl enable docker`; Windows: tùy chọn của Docker Desktop ở trên), và các container có `restart: unless-stopped` sẽ tự chạy theo.
+Docker tự khởi động khi VPS bật lại (`systemctl enable docker` ở bước 1), và các container có `restart: unless-stopped` sẽ tự chạy theo.
 
 **Cập nhật khi `main` có code mới:**
 

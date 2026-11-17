@@ -12,7 +12,12 @@ if [[ -z "$pw" || "$pw" == "change-me" ]]; then
   exit 1
 fi
 [[ -n "$(env_get OPENAQ_API_KEY)" ]] || echo "Cảnh báo: OPENAQ_API_KEY trống, pipeline sẽ báo lỗi mỗi giờ cho tới khi có khóa." >&2
-[[ "$(env_get DB_BIND_ADDR)" == "0.0.0.0" ]] && echo "Cảnh báo: DB_BIND_ADDR=0.0.0.0 mở Postgres ra mọi mạng. Nên dùng IP Tailscale." >&2
+for var in DB_BIND_ADDR API_BIND_ADDR; do
+  v="$(env_get "$var")"
+  if [[ -z "$v" || "$v" == "0.0.0.0" ]]; then
+    echo "Cảnh báo: $var đang là ${v:-mặc định}. Trên VPS hãy đặt IP Tailscale (100.x.y.z), vì Docker mở cổng vòng qua ufw." >&2
+  fi
+done
 
 if ! docker volume inspect "$SHARED_VOLUME" >/dev/null 2>&1; then
   echo "Tạo volume dữ liệu $SHARED_VOLUME (một lần duy nhất)"
