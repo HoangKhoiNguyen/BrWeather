@@ -12,6 +12,7 @@ __pycache__/
 
 # Data and models (keep out of Git)
 data/
+backups/
 data-pipeline/ml/models/*.pkl
 data-pipeline/ml/models/*.joblib
 

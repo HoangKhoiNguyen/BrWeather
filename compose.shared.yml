@@ -1,0 +1,32 @@
+# Bổ sung cho máy chủ chung của nhóm (C-03). Dùng kèm docker-compose.yml:
+#   docker compose -f docker-compose.yml -f compose.shared.yml up -d
+# hoặc đơn giản là chạy scripts/env/up.sh.
+
+services:
+  # Sao lưu cơ sở dữ liệu mỗi ngày vào ./backups, giữ BACKUP_KEEP_DAYS ngày gần nhất.
+  backup:
+    image: postgres:16
+    env_file: .env
+    environment:
+      PGHOST: db
+      BACKUP_DIR: /backups
+    volumes:
+      - ./backups:/backups
+      - ./scripts/db/backup-loop.sh:/backup-loop.sh:ro
+    entrypoint: ["bash", "/backup-loop.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  # Trên máy chủ chung, volume được tạo sẵn ngoài Compose (scripts/env/up.sh làm việc này).
+  # Nhờ vậy `docker compose down -v` gõ nhầm cũng không xóa được dữ liệu.
+  pgdata:
+    external: true
+    name: brweather_shared_pgdata

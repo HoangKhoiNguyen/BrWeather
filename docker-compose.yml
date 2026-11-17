@@ -1,38 +1,91 @@
+# brWeather – môi trường chạy bằng Docker Compose (C-03).
+# Dùng được cho cả máy cá nhân lẫn máy chủ chung của nhóm.
+# Máy chủ chung: chạy qua scripts/env/up.sh (bật thêm compose.shared.yml). Xem docs/shared-environment.md.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"   # mỗi file log tối đa 10 MB
+    max-file: "3"     # giữ 3 file, tránh log làm đầy ổ đĩa khi chạy lâu
+
 services:
   db:
     image: postgres:16
     env_file: .env
+    restart: unless-stopped
     ports:
-      - "5432:5432"
+      # Mặc định chỉ mở cho chính máy đó (127.0.0.1). Muốn cho thành viên khác kết nối
+      # thì đặt DB_BIND_ADDR = IP Tailscale của máy chủ trong .env, không đặt 0.0.0.0 trên VPS.
+      - "${DB_BIND_ADDR:-127.0.0.1}:${DB_HOST_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       retries: 10
+    logging: *default-logging
+
+  # Chạy một lần mỗi khi khởi động: áp db/schema.sql và các file mới trong db/migrations/.
+  # Chạy lại bao nhiêu lần cũng an toàn; dữ liệu cũ được giữ nguyên.
+  migrate:
+    image: postgres:16
+    env_file: .env
+    environment:
+      PGHOST: db
+    volumes:
+      - ./db:/db:ro
+      - ./scripts/db/migrate.sh:/migrate.sh:ro
+    entrypoint: ["bash", "/migrate.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    logging: *default-logging
 
   backend:
     build: ./backend
     env_file: .env
     environment:
       POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+    restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${API_BIND_ADDR:-0.0.0.0}:${API_HOST_PORT:-8080}:8080"
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      # Ảnh eclipse-temurin:*-jre không chắc có curl, nên gọi HTTP bằng bash /dev/tcp
+      test:
+        - CMD-SHELL
+        - >-
+          bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080
+          && printf "GET /api/v1/health HTTP/1.0\r\nHost: localhost\r\n\r\n" >&3
+          && grep -q "\"ok\"" <&3'
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    logging: *default-logging
 
   pipeline:
     build: ./data-pipeline
     env_file: .env
     environment:
       POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      PYTHONUNBUFFERED: "1"   # log hiện ngay trong `docker compose logs`
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
-    # Runs the hourly ingest in a loop; replace with a proper scheduler later if needed
+      migrate:
+        condition: service_completed_successfully
+    # Chạy ingest ngay khi khởi động, sau đó vào phút 10 mỗi giờ
     command: ["python", "-m", "brweather_data.jobs.scheduler"]
+    logging: *default-logging
 
 volumes:
   pgdata:

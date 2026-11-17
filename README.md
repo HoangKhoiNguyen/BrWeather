@@ -11,7 +11,7 @@
 | `mobile/` | React Native + TypeScript: app Android | C |
 | `db/` | Schema PostgreSQL dùng chung cho pipeline và backend | A + B |
 | `docs/` | Proposal, nguồn dữ liệu, danh sách chức năng, hợp đồng API | Cả nhóm |
-| `scripts/` | Tiện ích chạy tay, ví dụ kiểm tra cổng dữ liệu tuần 1 | B |
+| `scripts/` | Tiện ích chạy tay: kiểm tra cổng dữ liệu tuần 1, migration (`db/`), vận hành máy chủ chung (`env/`) | B, hieund |
 
 ## Chạy lần đầu
 
@@ -21,11 +21,12 @@
    cp .env.example .env
    ```
    Mỗi thành viên dùng khóa OpenAQ **của riêng mình** (OpenAQ không cho chia sẻ khóa). Không commit file `.env`.
-3. Chạy cơ sở dữ liệu và backend:
+3. Chạy cơ sở dữ liệu và backend (schema được service `migrate` tự áp):
    ```bash
    docker compose up -d db backend
    ```
-4. Chạy thử pipeline một lần:
+   Muốn dùng **môi trường chung của nhóm** (db + API chạy 24/7) thay vì db trên máy mình: xem `docs/shared-environment.md`.
+4. Chạy thử pipeline một lần (trên máy mình):
    ```bash
    cd data-pipeline
    pip install -e ".[dev]"
