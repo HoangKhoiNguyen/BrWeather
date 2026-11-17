@@ -32,3 +32,37 @@ jobs:
           java-version: "21"
           cache: maven
       - run: mvn -B -q package -DskipTests
+
+  # C-03: file Compose hợp lệ và migration chạy được, chạy lại lần hai vẫn không lỗi
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: brweather
+          POSTGRES_USER: brweather
+          POSTGRES_PASSWORD: ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U brweather -d brweather"
+          --health-interval 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: brweather
+      PGPASSWORD: ci-password
+      PGDATABASE: brweather
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose files
+        run: |
+          cp .env.example .env
+          docker compose config -q
+          docker compose -f docker-compose.yml -f compose.shared.yml config -q
+      - name: Apply schema and migrations
+        run: bash scripts/db/migrate.sh
+      - name: Re-run migrations (must be idempotent)
+        run: bash scripts/db/migrate.sh
