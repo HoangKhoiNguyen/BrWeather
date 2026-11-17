@@ -39,14 +39,37 @@ Log mỗi container giới hạn 3 × 10 MB, nên chạy lâu không làm đầy
 
 Hai việc dưới đây cần quyết định của nhóm hoặc tài khoản cá nhân, nên không làm sẵn trong repo được.
 
-### Việc 1 – Máy chủ cloud (đã chọn 17/11/2026)
+### Việc 1 – Máy chủ: Oracle Cloud Always Free (đã chọn 17/11/2026)
 
-Nhóm dùng **một VPS trên cloud**, truy cập qua **Tailscale**. Thứ tự ưu tiên:
+Nhóm dùng **một máy ảo miễn phí của Oracle Cloud (Always Free)**, truy cập qua **Tailscale**. Nếu không đăng ký được Oracle thì dự phòng bằng VPS trả phí nhỏ (vài USD/tháng, 2 vCPU / 2–4 GB RAM, gần Việt Nam như Singapore).
 
-| Thứ tự | Phương án | Chi phí | Ghi chú |
-|---|---|---|---|
-| 1 | **Oracle Cloud Always Free**, máy `VM.Standard.A1.Flex` 2 OCPU / 12 GB RAM, Ubuntu 24.04, ổ 50 GB | 0 đ (cần thẻ để xác minh) | Từ giữa 2026 Always Free chỉ còn 2 OCPU + 12 GB cho A1; **không tạo máy vượt mức**, vì khi hết dùng thử máy vượt mức bị tắt. Vùng Singapore hay hết chỗ cho A1, thử lại vào lúc khác hoặc đổi availability domain. Máy ARM: các image `postgres:16`, `maven`, `eclipse-temurin`, `python:3.11-slim` đều có bản ARM. |
-| 2 | VPS trả phí nhỏ (2 vCPU, 2–4 GB RAM, Ubuntu, gần Việt Nam như Singapore) | Vài USD/tháng | Dùng khi Oracle không đăng ký được. 2 GB RAM thì thêm swap (bên dưới) vì lúc build backend Maven tốn bộ nhớ. |
+**Cấu hình máy:**
+
+| Mục | Chọn | Lý do |
+|---|---|---|
+| Shape | `VM.Standard.A1.Flex` (Ampere, ARM) | Loại duy nhất đủ RAM trong Always Free. Các image `postgres:16`, `maven`, `eclipse-temurin`, `python:3.11-slim` đều có bản ARM. |
+| OCPU / RAM | **2 OCPU / 6 GB** | Hạn mức Always Free A1 từ giữa 2026 là tổng 2 OCPU + 12 GB; **không vượt**, vì khi hết dùng thử máy vượt mức bị tắt. Chọn 6 GB thay vì 12 GB để tránh bị thu hồi (xem dưới). |
+| Hệ điều hành | Ubuntu 24.04 (bản aarch64) | Khớp với lệnh cài đặt bên dưới |
+| Ổ đĩa | Boot volume 50 GB | Nằm trong 200 GB miễn phí |
+| Home region | **Singapore** (gần Việt Nam nhất) | Máy Always Free chỉ tạo được ở home region, và **home region chọn lúc đăng ký thì không đổi được**. |
+
+**Rủi ro bị thu hồi khi "nhàn rỗi":** Oracle có thể dừng máy Always Free nếu trong 7 ngày liên tục **cả ba** chỉ số đều dưới 20%: CPU (phân vị 95), mạng, và RAM (riêng máy A1). brWeather chỉ thu dữ liệu mỗi giờ nên CPU và mạng chắc chắn thấp. Vì vậy cách giữ máy là để **RAM luôn trên 20%**: Postgres + backend Java + pipeline dùng khoảng 1,5–2,5 GB, tức khoảng 25–40% của 6 GB, trong khi chỉ khoảng 12–20% của 12 GB. Đó là lý do chọn 6 GB.
+
+- `scripts/env/status.sh` có in tỷ lệ RAM đang dùng. Nếu thấy dưới 25% thì giảm RAM máy (Edit shape) xuống 4 GB.
+- Oracle gửi email báo trước khi dừng máy. Ai giữ tài khoản cần để ý email; máy bị dừng vẫn khởi động lại được, dữ liệu trên ổ đĩa không mất.
+- Cách triệt để: nâng tài khoản lên **Pay As You Go**. Tài nguyên Always Free vẫn miễn phí và không bị thu hồi vì nhàn rỗi, nhưng tạo nhầm tài nguyên ngoài hạn mức sẽ bị tính tiền. Chỉ làm khi người giữ tài khoản chắc chắn kiểm soát được.
+- **Không** dùng script "đốt CPU" giả tải để lách quy định.
+
+**Các bước trên Oracle Console** (người giữ tài khoản làm):
+
+1. Đăng ký tại `signup.cloud.oracle.com`: chọn home region **Singapore**, xác minh bằng thẻ (Oracle chỉ giữ tạm một khoản nhỏ để kiểm tra, không trừ tiền với tài nguyên Always Free).
+2. *Compute → Instances → Create instance*: Image **Canonical Ubuntu 24.04**, Shape **Ampere → VM.Standard.A1.Flex**, 2 OCPU / 6 GB. Kiểm tra có nhãn **Always Free-eligible**.
+3. *Networking*: để Oracle tạo VCN và subnet mới, **gán public IPv4** (cần cho lần SSH đầu và để máy tải image).
+4. *Add SSH keys*: dán public key của bạn (`~/.ssh/id_ed25519.pub`, chưa có thì tạo bằng `ssh-keygen -t ed25519`).
+5. *Boot volume*: 50 GB. Bấm **Create**.
+6. Nếu báo **Out of capacity**: thử availability domain khác (nếu vùng có nhiều AD), hoặc thử lại sau vài giờ, thường vào sáng sớm hoặc khuya.
+7. Khi máy chạy: `ssh ubuntu@<public IP>`, rồi làm tiếp phần **Dựng máy chủ** bên dưới.
+8. Sau khi Tailscale chạy ổn: vào *VCN → Security List* xóa luật mở cổng 22 từ `0.0.0.0/0`, từ đó SSH qua IP Tailscale (`ssh ubuntu@100.x.y.z`).
 
 **Tailscale** (gói Personal miễn phí, phi thương mại, tối đa 6 người dùng): mỗi thành viên cài và đăng nhập cùng một tailnet. VPS có IP `100.x.y.z` chỉ thành viên thấy. Nhờ vậy **không cần mở cổng 5432 hay 8080 ra Internet**.
 
@@ -70,7 +93,7 @@ Pipeline chung dùng **một khóa OpenAQ nhóm đang có**. Cách giữ khóa:
 ## Dựng máy chủ (người phụ trách làm một lần)
 
 ```bash
-# 0. (VPS 2 GB RAM) thêm 2 GB swap để build backend không bị thiếu bộ nhớ
+# 0. Thêm 2 GB swap: phòng thiếu bộ nhớ lúc build backend (bắt buộc với VPS 2 GB RAM)
 sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 

@@ -6,6 +6,12 @@ source "$(dirname "$0")/_common.sh"
 echo "== Container"
 compose ps --format 'table {{.Service}}\t{{.State}}\t{{.Status}}'
 
+echo; echo "== Máy chủ"
+if command -v free >/dev/null; then
+  free -m | awk '/^Mem:/ {printf "RAM: dùng %d/%d MB (%.0f%%)", $3, $2, $3*100/$2; if ($3*100/$2 < 25) printf "  <- thấp: Oracle Always Free có thể coi là nhàn rỗi, xem docs/shared-environment.md"; print ""}'
+fi
+df -h / | awk 'NR==2 {print "Ổ đĩa /: dùng " $3 "/" $2 " (" $5 ")"}'
+
 echo; echo "== API"
 port="$(env_get API_HOST_PORT)"; port="${port:-8080}"
 if curl -fsS --max-time 5 "http://localhost:${port}/api/v1/health"; then echo; else echo "API không phản hồi"; fi
