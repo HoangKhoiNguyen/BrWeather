@@ -12,14 +12,23 @@ import type {
 // Android emulator reaches the host machine at 10.0.2.2
 const BASE_URL = 'http://10.0.2.2:8080/api/v1';
 
-// true: use sample data. Set to false once the backend serves the endpoints in docs/api-contract.md.
-export const USE_MOCK = true;
+// true: use sample data in api/mock.ts. false: call the backend (stations, detail and weather are served
+// since backend Sprint 1; recommendations, subscriptions and alerts are not yet).
+export const USE_MOCK = false;
+
+// The backend does not serve these yet, so they stay on sample data (and show the sample banner)
+export const SAMPLE_ONLY = { recommendations: true, alerts: true };
+
+// Fail instead of spinning forever when the backend is down or unreachable
+const TIMEOUT_MS = 10000;
 
 // Placeholder until the app generates and stores its own anonymous id (F07a, F11)
 const DEVICE_ID = '00000000-0000-0000-0000-000000000000';
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  const res = await fetch(`${BASE_URL}${path}`, { signal: ctrl.signal }).finally(() => clearTimeout(timer));
   if (!res.ok) {
     throw new Error(`API ${path} failed with ${res.status}`);
   }
@@ -49,10 +58,14 @@ export const getWeather = (lat: number, lon: number): Promise<Weather> =>
   USE_MOCK ? Promise.resolve(mock.mockWeather()) : get(`/weather?lat=${lat}&lon=${lon}`);
 
 export const getRecommendations = (req: RecommendationRequest): Promise<RecommendationResult> =>
-  USE_MOCK ? Promise.resolve(mock.mockRecommendations(req)) : post('/recommendations', req);
+  USE_MOCK || SAMPLE_ONLY.recommendations
+    ? Promise.resolve(mock.mockRecommendations(req))
+    : post('/recommendations', req);
 
 export const getSubscriptions = (): Promise<Subscription[]> =>
-  USE_MOCK ? Promise.resolve(mock.mockSubscriptions()) : get(`/devices/${DEVICE_ID}/subscriptions`);
+  USE_MOCK || SAMPLE_ONLY.alerts
+    ? Promise.resolve(mock.mockSubscriptions())
+    : get(`/devices/${DEVICE_ID}/subscriptions`);
 
 export const getAlerts = (): Promise<AlertEvent[]> =>
-  USE_MOCK ? Promise.resolve(mock.mockAlerts()) : get(`/devices/${DEVICE_ID}/alerts`);
+  USE_MOCK || SAMPLE_ONLY.alerts ? Promise.resolve(mock.mockAlerts()) : get(`/devices/${DEVICE_ID}/alerts`);

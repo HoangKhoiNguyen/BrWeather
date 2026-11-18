@@ -9,13 +9,29 @@ import { Glass, SampleBanner, SectionTitle, fmt, vnDay, vnTime, weatherInfo } fr
 import { useLocation } from '../location';
 import { STALE_HOURS, glass, isStale, skyFor, tempRamp, text, uvRamp, vnHourOf } from '../theme';
 
+// The API sends one decimal (e.g. 19.5); whole degrees keep the layout on one line
+const fmtDeg = (v: number | null): string => (v === null ? '–' : `${Math.round(v)}°`);
+
 export default function WeatherScreen() {
   const { place } = useLocation();
   const [w, setW] = useState<Weather | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    getWeather(place.lat, place.lon).then(setW);
+    setW(null);
+    setError(false);
+    getWeather(place.lat, place.lon).then(setW, () => setError(true));
   }, [place]);
+
+  if (error) {
+    return (
+      <View style={styles.errorBox}>
+        <Glass>
+          <Text style={styles.errorText}>Chưa có dữ liệu thời tiết cho {place.label}. Thử chọn địa điểm khác hoặc quay lại sau.</Text>
+        </Glass>
+      </View>
+    );
+  }
 
   if (!w) {
     return <ActivityIndicator style={styles.loading} color="#fff" />;
@@ -33,7 +49,7 @@ export default function WeatherScreen() {
         <BigTemp value={w.current.temperatureC} />
         <Text style={styles.condition}>{weatherInfo(w.current.weatherCode, night).label}</Text>
         <Text style={styles.hiLo}>
-          C: {fmt(today?.maxC ?? null, '°')}   T: {fmt(today?.minC ?? null, '°')}   ·   Cảm giác {w.current.apparentC === null ? '–' : `${Math.round(w.current.apparentC)}°`}
+          C: {fmtDeg(today?.maxC ?? null)}   T: {fmtDeg(today?.minC ?? null)}   ·   Cảm giác {w.current.apparentC === null ? '–' : `${Math.round(w.current.apparentC)}°`}
         </Text>
         <View style={styles.badges}>
           <View style={styles.badge}>
@@ -147,9 +163,9 @@ function DailyList({ weather }: { weather: Weather }) {
             <Text style={styles.dayIcon}>{weatherInfo(d.weatherCode).icon}</Text>
             {(d.precipitationMm ?? 0) > 0 ? <Text style={styles.dayRain}>{d.precipitationMm} mm</Text> : null}
           </View>
-          <Text style={styles.dayMin}>{fmt(d.minC, '°')}</Text>
+          <Text style={styles.dayMin}>{fmtDeg(d.minC)}</Text>
           <RangeBar left={((d.minC ?? lo) - lo) / span} right={((d.maxC ?? hi) - lo) / span} index={i} />
-          <Text style={styles.dayMax}>{fmt(d.maxC, '°')}</Text>
+          <Text style={styles.dayMax}>{fmtDeg(d.maxC)}</Text>
         </View>
       ))}
     </View>
@@ -233,6 +249,8 @@ function uvLabel(uv: number | null): string {
 const styles = StyleSheet.create({
   content: { paddingBottom: 140 },
   loading: { marginTop: 120 },
+  errorBox: { marginTop: 120, paddingHorizontal: 16 },
+  errorText: { color: '#fff', fontSize: 15, lineHeight: 22 },
   hero: { alignItems: 'center', paddingTop: 16, paddingBottom: 18 },
   place: { fontSize: 30, fontWeight: '500', color: text.primary, marginBottom: 4 },
   temp: {

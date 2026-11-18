@@ -69,7 +69,11 @@ function Main() {
 
   // The whole app sits under a sky that follows the current weather and time of day
   useEffect(() => {
-    getWeather(place.lat, place.lon).then(w => setSky(skyFor(w.current.weatherCode, w.fetchedAt)));
+    getWeather(place.lat, place.lon).then(
+      w => setSky(skyFor(w.current.weatherCode, w.fetchedAt)),
+      // No weather for this place: still pick day or night from the clock
+      () => setSky(skyFor(null, new Date().toISOString())),
+    );
   }, [place]);
 
   // Android back button closes the station detail or place picker instead of the app

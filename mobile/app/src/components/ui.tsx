@@ -66,8 +66,9 @@ export function SectionTitle({ icon, children }: { icon?: string; children: stri
   );
 }
 
-export function SampleBanner() {
-  if (!USE_MOCK) {
+/** sample: this screen's data is sample data even when the rest of the app uses the backend. */
+export function SampleBanner({ sample = false }: { sample?: boolean }) {
+  if (!USE_MOCK && !sample) {
     return null;
   }
   return (

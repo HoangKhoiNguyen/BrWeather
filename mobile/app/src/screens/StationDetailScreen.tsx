@@ -25,11 +25,13 @@ const CATEGORY: Record<Anomaly['category'], { label: string; color: string; icon
 
 export default function StationDetailScreen({ station, onBack }: { station: StationSummary; onBack: () => void }) {
   const [detail, setDetail] = useState<StationDetail | null>(null);
+  const [error, setError] = useState(false);
   const shown = useCountUp(station.latest.pm25);
   const level = pm25Level(station.latest.pm25);
 
   useEffect(() => {
-    getStationDetail(station.id).then(setDetail);
+    setError(false);
+    getStationDetail(station.id).then(setDetail, () => setError(true));
   }, [station.id]);
 
   return (
@@ -64,7 +66,12 @@ export default function StationDetailScreen({ station, onBack }: { station: Stat
         </Glass>
       </FadeIn>
 
-      {!detail ? <ActivityIndicator color="#fff" style={styles.loading} /> : null}
+      {error ? (
+        <Glass>
+          <Text style={styles.errorText}>Không tải được lịch sử và dự báo của trạm này.</Text>
+        </Glass>
+      ) : null}
+      {!detail && !error ? <ActivityIndicator color="#fff" style={styles.loading} /> : null}
       {detail ? (
         <>
           <FadeIn delay={200}>
@@ -144,6 +151,7 @@ const styles = StyleSheet.create({
   meta: { fontSize: 12, color: text.faint },
   note: { fontSize: 11, color: text.faint, marginTop: 10 },
   loading: { marginTop: 30 },
+  errorText: { color: '#fff', fontSize: 15, lineHeight: 22 },
   forecastCard: { borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.35)' },
   noForecast: { paddingVertical: 8 },
   noForecastTitle: { fontSize: 17, fontWeight: '700', color: text.primary },

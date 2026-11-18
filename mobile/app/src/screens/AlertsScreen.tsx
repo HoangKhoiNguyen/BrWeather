@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { getAlerts, getSubscriptions } from '../api/client';
+import { SAMPLE_ONLY, getAlerts, getSubscriptions } from '../api/client';
 import type { AlertEvent, Subscription } from '../api/types';
 import { FadeIn, Pulse } from '../components/anim';
 import { Chip, Glass, SampleBanner, SectionTitle, vnDay, vnTime } from '../components/ui';
@@ -27,7 +27,7 @@ export default function AlertsScreen() {
       <FadeIn style={styles.header}>
         <Text style={styles.title}>Cảnh báo</Text>
         <Text style={styles.subtitle}>Báo khi PM2.5 vượt ngưỡng hoặc dự báo sắp vượt</Text>
-        <SampleBanner />
+        <SampleBanner sample={SAMPLE_ONLY.alerts} />
       </FadeIn>
 
       {subs.map((s, i) => (
