@@ -7,6 +7,7 @@
  *   <li>ExplanationService (F05): send validated numbers to the LLM, check every number in the answer,
  *       fall back to fixed templates on error, timeout or budget limit.</li>
  *   <li>WeatherService (F09): serve the latest Open-Meteo snapshot for a location.</li>
+ *   <li>Done in Sprint 1: StationService (F01–F04), WeatherService + WeatherAggregator (F09).</li>
  * </ul>
  */
 package vn.brweather.service;

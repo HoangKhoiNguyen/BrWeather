@@ -6,13 +6,13 @@ Mọi số liệu đều kèm `source`, `kind` (`observed` | `modelled` | `forec
 
 | Phương thức | Đường dẫn | Chức năng | Mô tả |
 |---|---|---|---|
-| GET | `/stations` | F01 | Danh sách trạm, tọa độ, bản ghi PM2.5 mới nhất, độ tin cậy, trạng thái (`ok` / `stale` / `missing`) |
-| GET | `/stations/nearest?lat=&lon=` | F01, F11 | Trạm gần nhất và khoảng cách (m) |
-| GET | `/stations/{id}/detail` | F02–F04 | Gộp cho màn hình chi tiết: `history` 24 giờ, `forecast`, `forecastIssuedAt`, `modelVersion`, `anomalies` |
+| GET | `/stations?lat=&lon=` | F01 | Danh sách trạm, tọa độ, `distanceKm` tới điểm `lat`/`lon`, bản ghi PM2.5 mới nhất, độ tin cậy, trạng thái (`ok` / `stale` / `missing`); sắp xếp theo khoảng cách |
+| GET | `/stations/nearest?lat=&lon=` | F01, F11 | Trạm gần nhất và `distanceKm` |
+| GET | `/stations/{id}/detail` | F02–F04 | Gộp cho màn hình chi tiết: `history` 24 giờ, `forecast`, `forecastIssuedAt`, `modelVersion`, `anomalies`. Trạm chưa đủ dữ liệu: `forecast`, `forecastIssuedAt`, `modelVersion` là `null` |
 | GET | `/stations/{id}/history?from=&to=` | F02 | Chuỗi PM2.5 theo giờ; giờ thiếu trả `null` |
-| GET | `/stations/{id}/forecast` | F03 | Dự báo 24 giờ, `issuedAt`, `modelVersion` |
+| GET | `/stations/{id}/forecast` | F03 | Dự báo 24 giờ, `issuedAt`, `modelVersion`, `points`. Chưa có dự báo: `available: false`, các trường còn lại `null`. Trạm không tồn tại: 404 |
 | GET | `/stations/{id}/anomalies?days=14` | F04 | Danh sách bất thường, loại `data` / `environment` / `needs_review` |
-| GET | `/weather?lat=&lon=` | F09 | Hiện tại, 24 giờ, 7 ngày; `fetchedAt`, `validTime` |
+| GET | `/weather?lat=&lon=` | F09 | Hiện tại, 24 giờ, 7 ngày; `source`, `kind` (luôn `modelled` với Open-Meteo), `fetchedAt`, `validTime`. App gắn nhãn "cũ" khi `fetchedAt` quá 3 giờ |
 | POST | `/recommendations` | F06 | Body: `durationMinutes`, `windowStartHour`, `windowEndHour` (giờ Việt Nam, ngày mai), sau này thêm `lat`, `lon`. Trả `options` (tối đa 3 khung giờ, lý do), `explanation`, `usedFallback` |
 | POST | `/explanations` | F05 | Body: loại (`current` / `forecast` / `recommendation`) + id. Trả đoạn giải thích, cờ `fallback` nếu dùng văn bản mẫu |
 | PUT | `/devices/{deviceId}/subscriptions` | F07a | Địa điểm theo dõi và ngưỡng của thiết bị ẩn danh |
