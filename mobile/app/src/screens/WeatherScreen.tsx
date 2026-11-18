@@ -6,14 +6,16 @@ import type { Weather } from '../api/types';
 import { FadeIn, useCountUp, useGrow } from '../components/anim';
 import { WeatherHeroIcon } from '../components/sky';
 import { Glass, SampleBanner, SectionTitle, fmt, vnDay, vnTime, weatherInfo } from '../components/ui';
-import { glass, skyFor, tempRamp, text, uvRamp } from '../theme';
+import { useLocation } from '../location';
+import { STALE_HOURS, glass, isStale, skyFor, tempRamp, text, uvRamp, vnHourOf } from '../theme';
 
 export default function WeatherScreen() {
+  const { place } = useLocation();
   const [w, setW] = useState<Weather | null>(null);
 
   useEffect(() => {
-    getWeather().then(setW);
-  }, []);
+    getWeather(place.lat, place.lon).then(setW);
+  }, [place]);
 
   if (!w) {
     return <ActivityIndicator style={styles.loading} color="#fff" />;
@@ -21,20 +23,33 @@ export default function WeatherScreen() {
 
   const night = skyFor(w.current.weatherCode, w.fetchedAt) === 'night';
   const today = w.daily[0];
+  const stale = isStale(w.fetchedAt);
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <FadeIn style={styles.hero}>
-        <Text style={styles.place}>Hà Nội</Text>
+        <Text style={styles.place}>{place.label}</Text>
         <WeatherHeroIcon code={w.current.weatherCode} night={night} />
         <BigTemp value={w.current.temperatureC} />
         <Text style={styles.condition}>{weatherInfo(w.current.weatherCode, night).label}</Text>
         <Text style={styles.hiLo}>
           C: {fmt(today?.maxC ?? null, '°')}   T: {fmt(today?.minC ?? null, '°')}   ·   Cảm giác {w.current.apparentC === null ? '–' : `${Math.round(w.current.apparentC)}°`}
         </Text>
-        <Text style={styles.source}>
-          {w.source} · cập nhật {vnTime(w.fetchedAt)}
-        </Text>
+        <View style={styles.badges}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>
+              {w.kind === 'observed' ? 'Số đo' : 'Dữ liệu mô hình'} – {w.source}
+            </Text>
+          </View>
+          <View style={[styles.badge, stale && styles.badgeStale]}>
+            <Text style={styles.badgeText}>
+              {stale ? '⚠️ Cũ · ' : ''}Cập nhật {vnTime(w.fetchedAt)}
+            </Text>
+          </View>
+        </View>
+        {stale ? (
+          <Text style={styles.staleNote}>Chưa lấy được số liệu mới hơn {STALE_HOURS} giờ, đang hiển thị bản đã lưu.</Text>
+        ) : null}
         <SampleBanner />
       </FadeIn>
 
@@ -44,15 +59,40 @@ export default function WeatherScreen() {
             <SectionTitle icon="🕒">Dự báo theo giờ</SectionTitle>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hours}>
-            {w.hourly.map((h, i) => (
-              <View key={h.time} style={[styles.hour, i === 0 && styles.hourNow]}>
-                <Text style={styles.hourTime}>{i === 0 ? 'Bây giờ' : vnTime(h.time)}</Text>
-                <Text style={styles.hourIcon}>{weatherInfo(h.weatherCode, skyFor(h.weatherCode, h.time) === 'night').icon}</Text>
-                <Text style={styles.hourRain}>{(h.precipitationProbPct ?? 0) >= 20 ? `${h.precipitationProbPct}%` : ' '}</Text>
-                <Text style={styles.hourTemp}>{h.temperatureC === null ? '–' : `${Math.round(h.temperatureC)}°`}</Text>
-              </View>
-            ))}
+            {w.hourly.map((h, i) => {
+              // Crossing midnight (Vietnam time) starts a new day: mark it so 01:00 is never read as today
+              const newDay = i > 0 && vnHourOf(h.time) === 0;
+              const rain = h.precipitationProbPct;
+              return (
+                <React.Fragment key={h.time}>
+                  {newDay ? (
+                    <View style={styles.dayBreak}>
+                      <View style={styles.dayBreakLine} />
+                      <Text style={styles.dayBreakText} numberOfLines={1}>
+                        {vnDay(h.time, true)}
+                      </Text>
+                    </View>
+                  ) : null}
+                  <View
+                    style={[styles.hour, i === 0 && styles.hourNow]}
+                    accessibilityLabel={`${i === 0 ? 'Bây giờ' : vnTime(h.time)}, khả năng có mưa ${rain ?? 'không rõ'} phần trăm`}>
+                    <Text style={styles.hourDay}>{i === 0 ? 'Hôm nay' : newDay ? vnDay(h.time, true) : ' '}</Text>
+                    <Text style={styles.hourTime}>{i === 0 ? 'Bây giờ' : vnTime(h.time)}</Text>
+                    <Text style={styles.hourIcon}>
+                      {weatherInfo(h.weatherCode, skyFor(h.weatherCode, h.time) === 'night').icon}
+                    </Text>
+                    <Text style={[styles.hourRain, (rain ?? 0) < 20 && styles.hourRainLow]}>
+                      💧{rain === null ? '–' : `${rain}%`}
+                    </Text>
+                    <Text style={styles.hourTemp}>{h.temperatureC === null ? '–' : `${Math.round(h.temperatureC)}°`}</Text>
+                  </View>
+                </React.Fragment>
+              );
+            })}
           </ScrollView>
+          <Text style={styles.rainNote}>
+            💧 = khả năng có mưa trong giờ đó (xác suất), không phải thời lượng hay lượng mưa.
+          </Text>
         </Glass>
       </FadeIn>
 
@@ -206,7 +246,32 @@ const styles = StyleSheet.create({
   },
   condition: { fontSize: 20, fontWeight: '600', color: text.primary },
   hiLo: { fontSize: 15, color: text.secondary, marginTop: 4 },
-  source: { fontSize: 11, color: text.faint, marginTop: 8, marginBottom: 10 },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 10, marginBottom: 10 },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: glass.highlight,
+    borderWidth: 1,
+    borderColor: glass.border,
+  },
+  badgeStale: { backgroundColor: 'rgba(250,204,21,0.2)', borderColor: 'rgba(250,204,21,0.6)' },
+  badgeText: { fontSize: 11, fontWeight: '600', color: text.secondary },
+  staleNote: { fontSize: 12, color: text.secondary, marginBottom: 10, paddingHorizontal: 32, textAlign: 'center' },
+  dayBreak: { alignItems: 'center', justifyContent: 'center', width: 52, marginHorizontal: 2 },
+  dayBreakLine: { position: 'absolute', top: 8, bottom: 8, width: 1, backgroundColor: glass.border },
+  dayBreakText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: text.primary,
+    backgroundColor: 'rgba(8,18,40,0.8)',
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    borderRadius: 6,
+  },
+  hourDay: { fontSize: 10, fontWeight: '700', color: text.faint, marginBottom: 2 },
+  hourRainLow: { opacity: 0.55 },
+  rainNote: { fontSize: 11, color: text.faint, marginTop: 8, paddingHorizontal: 18 },
   noSidePad: { paddingHorizontal: 0 },
   padded: { paddingHorizontal: 18 },
   hours: { paddingHorizontal: 12 },
@@ -214,7 +279,7 @@ const styles = StyleSheet.create({
   hourNow: { backgroundColor: glass.highlight, borderWidth: 1, borderColor: glass.border },
   hourTime: { fontSize: 13, fontWeight: '600', color: text.primary },
   hourIcon: { fontSize: 24, marginTop: 8 },
-  hourRain: { fontSize: 11, fontWeight: '700', color: '#8FD3FF', height: 16 },
+  hourRain: { fontSize: 11, fontWeight: '700', color: '#8FD3FF', height: 16, marginBottom: 2 },
   hourTemp: { fontSize: 19, fontWeight: '500', color: text.primary },
   day: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 8 },
   dayLine: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: glass.border },

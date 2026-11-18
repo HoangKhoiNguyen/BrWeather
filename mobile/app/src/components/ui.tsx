@@ -4,7 +4,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 
 import { USE_MOCK } from '../api/client';
 import type { Reliability, SeriesPoint } from '../api/types';
-import { PM_SCALE_MAX, glass, pm25Level, pmColors, pmRamp, text } from '../theme';
+import { FAR_STATION_KM, PM_SCALE_MAX, glass, pm25Level, pmColors, pmRamp, text } from '../theme';
 import { useGrow } from './anim';
 
 const VN_OFFSET = 7 * 3600 * 1000;
@@ -146,24 +146,75 @@ export function PmGauge({ value }: { value: number | null }) {
   );
 }
 
-function Bar({ value, max, height, index }: { value: number; max: number; height: number; index: number }) {
+function Bar({
+  value,
+  max,
+  height,
+  index,
+  forecast,
+}: {
+  value: number;
+  max: number;
+  height: number;
+  index: number;
+  forecast: boolean;
+}) {
   const grow = useGrow(80 + index * 22, 700);
+  const color = pm25Level(value).color;
   return (
     <Animated.View
       style={[
         styles.bar,
-        {
-          height: Math.max(3, (value / max) * height),
-          backgroundImage: `linear-gradient(180deg, ${pm25Level(value).color} 0%, rgba(255,255,255,0.25) 100%)`,
-          transform: [{ scaleY: grow }],
-        },
+        { height: Math.max(3, (value / max) * height), transform: [{ scaleY: grow }] },
+        forecast
+          ? // Forecast: hollow bar with a dashed outline, so it never looks like a measurement
+            [styles.barForecast, { borderColor: color }]
+          : { backgroundImage: `linear-gradient(180deg, ${color} 0%, rgba(255,255,255,0.25) 100%)` },
       ]}
     />
   );
 }
 
+/** Small legend: solid bar = measured, dashed outline = forecast. */
+export function ChartLegend() {
+  return (
+    <View style={styles.legend}>
+      <View style={styles.legendItem}>
+        <View style={[styles.legendSwatch, styles.legendSolid]} />
+        <Text style={styles.legendText}>Số đo</Text>
+      </View>
+      <View style={styles.legendItem}>
+        <View style={[styles.legendSwatch, styles.legendDashed]} />
+        <Text style={styles.legendText}>Dự báo</Text>
+      </View>
+    </View>
+  );
+}
+
+/** Warns that the nearest station is far from the chosen place (T2.1-4). */
+export function FarWarning({ km }: { km: number }) {
+  if (km <= FAR_STATION_KM) {
+    return null;
+  }
+  return (
+    <View style={styles.warn}>
+      <Text style={styles.warnText}>
+        ⚠️ Trạm cách {km} km (xa hơn {FAR_STATION_KM} km), số liệu có thể không phản ánh không khí nơi bạn chọn.
+      </Text>
+    </View>
+  );
+}
+
 // A missing hour leaves an empty slot: the chart must never imply data that does not exist
-export function BarChart({ data, height = 120 }: { data: SeriesPoint[]; height?: number }) {
+export function BarChart({
+  data,
+  height = 120,
+  variant = 'observed',
+}: {
+  data: SeriesPoint[];
+  height?: number;
+  variant?: 'observed' | 'forecast';
+}) {
   const max = Math.max(1, ...data.map(p => p.value ?? 0));
   const ticks = [0, Math.floor(data.length / 3), Math.floor((2 * data.length) / 3), data.length - 1];
   return (
@@ -171,7 +222,9 @@ export function BarChart({ data, height = 120 }: { data: SeriesPoint[]; height?:
       <View style={[styles.chart, { height }]}>
         {data.map((p, i) => (
           <View key={p.time} style={styles.barSlot}>
-            {p.value !== null ? <Bar value={p.value} max={max} height={height} index={i} /> : null}
+            {p.value !== null ? (
+              <Bar value={p.value} max={max} height={height} index={i} forecast={variant === 'forecast'} />
+            ) : null}
           </View>
         ))}
       </View>
@@ -258,4 +311,21 @@ const styles = StyleSheet.create({
   bar: { borderRadius: 4, transformOrigin: 'bottom' },
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
   axisText: { fontSize: 11, color: text.faint },
+  barForecast: { borderWidth: 1.5, borderStyle: 'dashed', backgroundColor: 'rgba(255,255,255,0.08)' },
+  legend: { flexDirection: 'row', gap: 16, marginBottom: 10 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendSwatch: { width: 12, height: 12, borderRadius: 3 },
+  legendSolid: { backgroundColor: pmColors.moderate },
+  legendDashed: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: pmColors.moderate },
+  legendText: { fontSize: 11, color: text.secondary },
+  warn: {
+    backgroundColor: 'rgba(250,204,21,0.16)',
+    borderColor: 'rgba(250,204,21,0.45)',
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 12,
+  },
+  warnText: { fontSize: 12, lineHeight: 17, color: text.primary },
 });

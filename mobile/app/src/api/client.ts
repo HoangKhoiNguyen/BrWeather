@@ -38,14 +38,15 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return (await res.json()) as T;
 }
 
-export const getStations = (): Promise<StationSummary[]> =>
-  USE_MOCK ? Promise.resolve(mock.mockStations()) : get('/stations');
+// Stations come back sorted by distance from the chosen place
+export const getStations = (lat: number, lon: number): Promise<StationSummary[]> =>
+  USE_MOCK ? Promise.resolve(mock.mockStations(lat, lon)) : get(`/stations?lat=${lat}&lon=${lon}`);
 
 export const getStationDetail = (id: number): Promise<StationDetail> =>
   USE_MOCK ? Promise.resolve(mock.mockStationDetail(id)) : get(`/stations/${id}/detail`);
 
-export const getWeather = (): Promise<Weather> =>
-  USE_MOCK ? Promise.resolve(mock.mockWeather()) : get('/weather?lat=21.0285&lon=105.8542');
+export const getWeather = (lat: number, lon: number): Promise<Weather> =>
+  USE_MOCK ? Promise.resolve(mock.mockWeather()) : get(`/weather?lat=${lat}&lon=${lon}`);
 
 export const getRecommendations = (req: RecommendationRequest): Promise<RecommendationResult> =>
   USE_MOCK ? Promise.resolve(mock.mockRecommendations(req)) : post('/recommendations', req);

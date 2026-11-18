@@ -44,10 +44,13 @@ Sửa code trong `src/` rồi lưu, màn hình tự cập nhật (Fast Refresh).
 | Thư mục | Nội dung |
 |---|---|
 | `api/` | `types.ts` theo `docs/api-contract.md`; `mock.ts` dữ liệu mẫu; `client.ts` chọn giữa dữ liệu mẫu và backend |
-| `screens/` | Không khí (F01), Chi tiết trạm (F02–F04), Thời tiết (F09), Chọn giờ (F05, F06), Cảnh báo (F07a) |
-| `components/` | Thẻ, nhãn độ tin cậy, nút chọn, biểu đồ cột, định dạng giờ Việt Nam |
+| `screens/` | Không khí (F01, bản đồ), Chi tiết trạm (F02–F04), Thời tiết (F09), Chọn giờ (F05, F06), Cảnh báo (F07a), Chọn địa điểm (F11) |
+| `components/` | Thẻ, nhãn độ tin cậy, nút chọn, biểu đồ cột (số đo nét liền, dự báo viền đứt), bản đồ trạm, định dạng giờ Việt Nam |
+| `location.tsx` | Địa điểm đang xem (GPS, chọn tay hoặc mặc định), danh sách quận, tính khoảng cách |
 
-Chưa làm: bản đồ (F01), chọn địa điểm bằng GPS (F11), kết nối backend thật.
+Bản đồ dùng MapLibre với tile OpenStreetMap của OpenFreeMap (không cần khóa). Vị trí chỉ xin quyền khi bấm "Dùng vị trí hiện tại", chỉ dùng vị trí gần đúng, không chạy nền. Trên máy ảo, đặt vị trí Hà Nội bằng **Extended Controls (⋯) → Location**.
+
+Chưa làm: lưu địa điểm đã chọn sau khi tắt app, kết nối backend thật.
 
 ## Quy tắc hiển thị
 

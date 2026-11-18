@@ -4,8 +4,18 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { getStationDetail } from '../api/client';
 import type { Anomaly, StationDetail, StationSummary } from '../api/types';
 import { FadeIn, PressScale, useCountUp } from '../components/anim';
-import { BarChart, Glass, PmGauge, ReliabilityPill, SectionTitle, vnTime } from '../components/ui';
-import { glass, pm25Level, pmColors, text } from '../theme';
+import {
+  BarChart,
+  ChartLegend,
+  FarWarning,
+  Glass,
+  PmGauge,
+  ReliabilityPill,
+  SectionTitle,
+  vnDay,
+  vnTime,
+} from '../components/ui';
+import { PM_SCALE_NAME, glass, pm25Level, pmColors, text } from '../theme';
 
 const CATEGORY: Record<Anomaly['category'], { label: string; color: string; icon: string }> = {
   environment: { label: 'Ô nhiễm tăng thật', color: pmColors.veryHigh, icon: '⚠️' },
@@ -43,6 +53,8 @@ export default function StationDetailScreen({ station, onBack }: { station: Stat
       <FadeIn delay={100}>
         <Glass>
           <PmGauge value={station.latest.pm25} />
+          <Text style={styles.note}>{PM_SCALE_NAME}</Text>
+          <FarWarning km={station.distanceKm} />
           <View style={styles.footRow}>
             <ReliabilityPill level={station.latest.reliability} />
             <Text style={styles.meta}>
@@ -64,12 +76,25 @@ export default function StationDetailScreen({ station, onBack }: { station: Stat
           </FadeIn>
 
           <FadeIn delay={320}>
-            <Glass>
+            <Glass style={styles.forecastCard}>
               <SectionTitle icon="🔮">Dự báo 24 giờ tới</SectionTitle>
-              <BarChart data={detail.forecast} />
-              <Text style={styles.note}>
-                Phát hành {vnTime(detail.forecastIssuedAt)} · {detail.modelVersion}
-              </Text>
+              {detail.forecast && detail.forecastIssuedAt ? (
+                <>
+                  <ChartLegend />
+                  <BarChart data={detail.forecast} variant="forecast" />
+                  <Text style={styles.note}>
+                    Dự báo, không phải số đo · phát hành {vnTime(detail.forecastIssuedAt)} ({vnDay(detail.forecastIssuedAt)})
+                    {detail.modelVersion ? ` · mô hình ${detail.modelVersion}` : ''}
+                  </Text>
+                </>
+              ) : (
+                <View style={styles.noForecast}>
+                  <Text style={styles.noForecastTitle}>Chưa có dự báo</Text>
+                  <Text style={styles.note}>
+                    Trạm này chưa đủ dữ liệu lịch sử để dự báo. Số đo hiện tại và 24 giờ qua vẫn hiển thị bình thường.
+                  </Text>
+                </View>
+              )}
             </Glass>
           </FadeIn>
 
@@ -119,6 +144,9 @@ const styles = StyleSheet.create({
   meta: { fontSize: 12, color: text.faint },
   note: { fontSize: 11, color: text.faint, marginTop: 10 },
   loading: { marginTop: 30 },
+  forecastCard: { borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.35)' },
+  noForecast: { paddingVertical: 8 },
+  noForecastTitle: { fontSize: 17, fontWeight: '700', color: text.primary },
   anomaly: {
     borderLeftWidth: 3,
     paddingLeft: 12,
