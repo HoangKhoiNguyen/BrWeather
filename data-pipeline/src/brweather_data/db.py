@@ -87,9 +87,23 @@ def insert_pm25(conn: psycopg.Connection, station_id: int, rows: list[tuple[date
 
 def insert_weather_snapshot(conn: psycopg.Connection, lat: float, lon: float, data: dict) -> int:
     """Store one Open-Meteo response as a snapshot; snapshots are never overwritten."""
+    current = data.get("current") or {}
     with conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO weather_snapshots (lat, lon) VALUES (%s, %s) RETURNING snapshot_id", (lat, lon)
+            """
+            INSERT INTO weather_snapshots (lat, lon, current_valid_time, current_temperature_c,
+                current_apparent_temperature_c, current_humidity_pct, current_precipitation_mm,
+                current_weather_code, current_wind_speed_kmh, current_wind_direction_deg, current_uv_index)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING snapshot_id
+            """,
+            (
+                lat, lon, _utc(current["time"]) if current.get("time") else None,
+                current.get("temperature_2m"), current.get("apparent_temperature"),
+                current.get("relative_humidity_2m"), current.get("precipitation"),
+                current.get("weather_code"), current.get("wind_speed_10m"),
+                current.get("wind_direction_10m"), current.get("uv_index"),
+            ),
         )
         snapshot_id = cur.fetchone()[0]
         h = data["hourly"]

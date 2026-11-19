@@ -1,4 +1,6 @@
 """Open-Meteo clients (no API key). Free for non-commercial use under 10,000 calls/day; attribution required."""
+from datetime import datetime, timezone
+
 import requests
 
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
@@ -12,6 +14,7 @@ CURRENT_WEATHER = [
     "weather_code",
     "wind_speed_10m",
     "wind_direction_10m",
+    "uv_index",
 ]
 HOURLY_WEATHER = [
     "temperature_2m",
@@ -52,7 +55,13 @@ def fetch_weather(lat: float, lon: float, forecast_days: int = 7) -> dict:
         timeout=30,
     )
     resp.raise_for_status()
-    return resp.json()
+    payload = resp.json()
+    payload["brweather_meta"] = {
+        "source": "Open-Meteo",
+        "source_type": "MODEL",
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+    }
+    return payload
 
 
 def fetch_modelled_pm25(lat: float, lon: float, past_days: int = 1) -> dict:

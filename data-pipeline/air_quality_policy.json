@@ -1,0 +1,71 @@
+{
+  "policy_version": "1.0.0",
+  "accessed_date": "2026-11-12",
+  "sensor_scope": {
+    "sensor_id": 14581375,
+    "location_name": "Dragon",
+    "latitude": 20.9933,
+    "longitude": 105.9441,
+    "role": "REFERENCE_OBSERVATION_FOR_PROTOTYPE",
+    "instrument": "AirGradient Open Air Generation 1 (O-1PST)",
+    "is_monitor": false
+  },
+  "official_reference": {
+    "title": "Hướng dẫn kỹ thuật tính toán và công bố chỉ số chất lượng không khí Việt Nam (VN_AQI)",
+    "issuer": "Tổng cục Môi trường, Bộ Tài nguyên và Môi trường",
+    "decision": "1459/QĐ-TCMT",
+    "issued_date": "2019-11-12",
+    "url": "https://vea.mae.gov.vn/Data/files/QD%201459%20TCMT%20ngay%2012_11_2019%20AQI%281%29.pdf",
+    "scope": "VN_AQI from quality-controlled data of continuous automatic ambient-air monitoring stations",
+    "pm25_hourly_method": "12-hour Nowcast; at least 2 of the latest 3 hourly values must exist",
+    "uncertainty": "Current continued legal status was not independently established beyond the official agency-hosted document; applicability to this community sensor is not demonstrated."
+  },
+  "additional_reference": {
+    "title": "QCVN 05:2023/BTNMT - Quy chuẩn kỹ thuật quốc gia về chất lượng không khí",
+    "issuer": "Bộ Tài nguyên và Môi trường",
+    "url": "https://cem.gov.vn/storage/documents/66cf004657629qcvn-052023btnmt.pdf",
+    "scope": "Ambient-air concentration limits; reviewed for context, not used as an AQI calculation method"
+  },
+  "vn_aqi_eligible": false,
+  "vn_aqi_ineligibility_reasons": [
+    "Dragon metadata says is_monitor=false",
+    "No evidence that the instrument and data meet statutory QA/QC requirements",
+    "Prototype uses one community PM2.5 sensor and cannot publish an official station-level VN_AQI"
+  ],
+  "official_vn_aqi_bands_not_applied_to_dragon": [
+    {"aqi_min": 0, "aqi_max": 50, "name_vi": "Tốt", "color_vi": "Xanh", "rgb": [0, 228, 0]},
+    {"aqi_min": 51, "aqi_max": 100, "name_vi": "Trung bình", "color_vi": "Vàng", "rgb": [255, 255, 0]},
+    {"aqi_min": 101, "aqi_max": 150, "name_vi": "Kém", "color_vi": "Da cam", "rgb": [255, 126, 0]},
+    {"aqi_min": 151, "aqi_max": 200, "name_vi": "Xấu", "color_vi": "Đỏ", "rgb": [255, 0, 0]},
+    {"aqi_min": 201, "aqi_max": 300, "name_vi": "Rất xấu", "color_vi": "Tím", "rgb": [143, 63, 151]},
+    {"aqi_min": 301, "aqi_max": 500, "name_vi": "Nguy hại", "color_vi": "Nâu", "rgb": [126, 0, 35]}
+  ],
+  "official_pm25_breakpoints_ug_m3": [
+    {"aqi": 0, "concentration": 0},
+    {"aqi": 50, "concentration": 25},
+    {"aqi": 100, "concentration": 50},
+    {"aqi": 150, "concentration": 80},
+    {"aqi": 200, "concentration": 150},
+    {"aqi": 300, "concentration": 250},
+    {"aqi": 400, "concentration": 350},
+    {"aqi": 500, "concentration": 500}
+  ],
+  "method": "PROVISIONAL_PM25_CONCENTRATION_STATUS",
+  "averaging_period_hours": 12,
+  "minimum_valid_latest_3_hours": 2,
+  "minimum_valid_hours": 9,
+  "minimum_coverage_pct": 75.0,
+  "internal_coverage_note": "The 9/12 coverage gate is a conservative prototype rule, not stated as a VN_AQI requirement in Decision 1459.",
+  "stale_after_hours": 3,
+  "accepted_units": ["µg/m³", "μg/m³", "ug/m3", "�g/m�"],
+  "provisional_bands": [
+    {"min_inclusive": 0, "max_inclusive": 25, "status": "PROVISIONAL_LOW"},
+    {"min_exclusive": 25, "max_inclusive": 50, "status": "PROVISIONAL_MODERATE"},
+    {"min_exclusive": 50, "max_inclusive": 80, "status": "PROVISIONAL_ELEVATED"},
+    {"min_exclusive": 80, "max_inclusive": 150, "status": "PROVISIONAL_HIGH"},
+    {"min_exclusive": 150, "max_inclusive": 250, "status": "PROVISIONAL_VERY_HIGH"},
+    {"min_exclusive": 250, "max_inclusive": 350, "status": "PROVISIONAL_EXTREME"},
+    {"min_exclusive": 350, "max_inclusive": null, "status": "PROVISIONAL_ABOVE_SCALE"}
+  ],
+  "breakpoint_note": "Concentration boundaries are the PM2.5 breakpoints in Decision 1459, reused only to label internal concentration bands. No AQI number or official VN_AQI category is produced."
+}

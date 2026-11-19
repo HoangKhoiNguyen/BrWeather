@@ -1,0 +1,53 @@
+{
+  "version": "1.0.0",
+  "language": "vi",
+  "disclaimer": "Thông tin prototype từ một cảm biến cộng đồng, không đại diện toàn Hà Nội, không thay thế tư vấn y tế.",
+  "sources": {
+    "VN_DECISION_1459": {
+      "title": "Quyết định 1459/QĐ-TCMT và Hướng dẫn VN_AQI",
+      "issuer": "Tổng cục Môi trường",
+      "url": "https://vea.mae.gov.vn/Data/files/QD%201459%20TCMT%20ngay%2012_11_2019%20AQI%281%29.pdf"
+    },
+    "WHO_PERSONAL_ACTIONS_2024": {
+      "title": "Air pollution: Personal interventions and risk communication",
+      "issuer": "World Health Organization",
+      "url": "https://www.who.int/news-room/questions-and-answers/item/air-pollution-personal-interventions-and-risk-communication"
+    }
+  },
+  "recommendations": [
+    {
+      "recommendation_id": "MONITOR_GENERAL_V1",
+      "audience": "GENERAL",
+      "trigger_statuses": ["PROVISIONAL_LOW", "PROVISIONAL_MODERATE"],
+      "message": "Theo dõi cập nhật tiếp theo và cân nhắc thời gian, địa điểm hoạt động nếu chất lượng không khí thay đổi.",
+      "source_reference": "WHO_PERSONAL_ACTIONS_2024"
+    },
+    {
+      "recommendation_id": "ADJUST_OUTDOOR_GENERAL_V1",
+      "audience": "GENERAL",
+      "trigger_statuses": ["PROVISIONAL_ELEVATED", "PROVISIONAL_HIGH", "PROVISIONAL_VERY_HIGH", "PROVISIONAL_EXTREME", "PROVISIONAL_ABOVE_SCALE"],
+      "message": "Cân nhắc điều chỉnh thời gian, địa điểm hoặc cường độ hoạt động ngoài trời để giảm phơi nhiễm.",
+      "source_reference": "WHO_PERSONAL_ACTIONS_2024"
+    },
+    {
+      "recommendation_id": "REDUCE_EXPOSURE_SENSITIVE_V1",
+      "audience": "SENSITIVE_GROUP",
+      "trigger_statuses": ["PROVISIONAL_MODERATE", "PROVISIONAL_ELEVATED", "PROVISIONAL_HIGH", "PROVISIONAL_VERY_HIGH", "PROVISIONAL_EXTREME", "PROVISIONAL_ABOVE_SCALE"],
+      "message": "Nhóm nhạy cảm nên cân nhắc giảm thời gian hoặc cường độ hoạt động ngoài trời và theo dõi hướng dẫn của chuyên gia y tế nếu có bệnh nền.",
+      "source_reference": "WHO_PERSONAL_ACTIONS_2024"
+    },
+    {
+      "recommendation_id": "SEEK_HELP_SEVERE_SYMPTOMS_V1",
+      "audience": "ALL",
+      "trigger_statuses": ["PROVISIONAL_HIGH", "PROVISIONAL_VERY_HIGH", "PROVISIONAL_EXTREME", "PROVISIONAL_ABOVE_SCALE"],
+      "message": "Nếu xuất hiện triệu chứng nghiêm trọng, hãy tìm hỗ trợ y tế phù hợp.",
+      "source_reference": "WHO_PERSONAL_ACTIONS_2024"
+    }
+  ],
+  "excluded_topics": [
+    "Medication changes are excluded",
+    "Diagnosis is excluded",
+    "Respirator advice is excluded because individual fit and medical considerations are outside this prototype",
+    "No recommendation is emitted when assessment is suppressed or pending review"
+  ]
+}
