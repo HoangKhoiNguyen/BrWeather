@@ -4,10 +4,19 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View }
 import { getStations } from '../api/client';
 import type { StationSummary } from '../api/types';
 import { FadeIn, PressScale, Pulse, useCountUp } from '../components/anim';
-import { Glass, PmGauge, ReliabilityPill, SampleBanner, SectionTitle, vnTime } from '../components/ui';
-import { glass, pm25Level, pmColors, text } from '../theme';
+import { StationMap } from '../components/StationMap';
+import { FarWarning, Glass, PmGauge, ReliabilityPill, SampleBanner, SectionTitle, vnTime } from '../components/ui';
+import { useLocation } from '../location';
+import { FAR_STATION_KM, PM_SCALE_NAME, glass, pm25Level, pmColors, text } from '../theme';
 
-export default function OverviewScreen({ onOpen }: { onOpen: (s: StationSummary) => void }) {
+export default function OverviewScreen({
+  onOpen,
+  onPickPlace,
+}: {
+  onOpen: (s: StationSummary) => void;
+  onPickPlace: () => void;
+}) {
+  const { place } = useLocation();
   const [stations, setStations] = useState<StationSummary[] | null>(null);
   const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -15,11 +24,11 @@ export default function OverviewScreen({ onOpen }: { onOpen: (s: StationSummary)
   const load = useCallback(async () => {
     try {
       setError(false);
-      setStations(await getStations());
+      setStations(await getStations(place.lat, place.lon));
     } catch {
       setError(true);
     }
-  }, []);
+  }, [place]);
 
   useEffect(() => {
     load();
@@ -41,10 +50,12 @@ export default function OverviewScreen({ onOpen }: { onOpen: (s: StationSummary)
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#fff" colors={['#1F6FD1']} />}>
       <FadeIn>
-        <View style={styles.header}>
-          <Text style={styles.place}>📍 Hà Nội</Text>
-          <Text style={styles.headerSub}>Chất lượng không khí</Text>
-        </View>
+        <PressScale onPress={onPickPlace} accessibilityLabel="Đổi địa điểm" style={styles.header}>
+          <Text style={styles.place}>📍 {place.label}</Text>
+          <Text style={styles.headerSub}>
+            {place.source === 'gps' ? 'Vị trí hiện tại' : 'Hà Nội'} · Chất lượng không khí · <Text style={styles.change}>Đổi ▾</Text>
+          </Text>
+        </PressScale>
         <SampleBanner />
       </FadeIn>
 
@@ -71,6 +82,12 @@ export default function OverviewScreen({ onOpen }: { onOpen: (s: StationSummary)
             </Text>
             <Text style={styles.note}>Văn bản mẫu · sau này do AI tạo từ số liệu đã kiểm tra</Text>
           </Glass>
+        </FadeIn>
+      ) : null}
+
+      {stations ? (
+        <FadeIn delay={300}>
+          <StationMap stations={stations} place={place} onOpen={onOpen} />
         </FadeIn>
       ) : null}
 
@@ -110,6 +127,8 @@ function Hero({ station, onPress }: { station: StationSummary; onPress: () => vo
       </View>
       <Text style={[styles.level, { color: level.color }]}>{level.label}</Text>
       <PmGauge value={latest.pm25} />
+      <Text style={styles.scale}>{PM_SCALE_NAME}</Text>
+      <FarWarning km={station.distanceKm} />
       <View style={styles.heroFoot}>
         <ReliabilityPill level={latest.reliability} />
         <Text style={styles.meta}>
@@ -132,7 +151,7 @@ function StationRow({ station, last, onPress }: { station: StationSummary; last:
           {station.name}
         </Text>
         <Text style={styles.meta}>
-          {station.distanceKm} km
+          {station.distanceKm} km{station.distanceKm > FAR_STATION_KM ? ' ⚠️ xa' : ''}
           {latest.measuredAt ? ` · ${vnTime(latest.measuredAt)}` : ''}
           {latest.status === 'stale' ? ' · Dữ liệu cũ' : ''}
         </Text>
@@ -151,7 +170,9 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 140 },
   header: { alignItems: 'center', paddingTop: 18, paddingBottom: 10 },
   place: { fontSize: 30, fontWeight: '600', color: text.primary },
-  headerSub: { fontSize: 15, color: text.secondary, marginTop: 2 },
+  headerSub: { fontSize: 14, color: text.secondary, marginTop: 2 },
+  change: { color: text.primary, fontWeight: '700' },
+  scale: { fontSize: 11, color: text.faint, marginTop: 6 },
   loading: { marginTop: 80 },
   hero: {
     marginHorizontal: 16,

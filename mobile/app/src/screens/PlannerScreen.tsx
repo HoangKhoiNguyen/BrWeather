@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { getRecommendations } from '../api/client';
+import { SAMPLE_ONLY, getRecommendations } from '../api/client';
 import type { Recommendation, RecommendationResult } from '../api/types';
 import { FadeIn } from '../components/anim';
 import { Chip, Glass, SampleBanner, SectionTitle, vnTime } from '../components/ui';
@@ -32,7 +32,7 @@ export default function PlannerScreen() {
       <FadeIn style={styles.header}>
         <Text style={styles.title}>Chọn giờ ra ngoài</Text>
         <Text style={styles.subtitle}>Ngày mai · xét bụi mịn, khả năng mưa và nhiệt độ</Text>
-        <SampleBanner />
+        <SampleBanner sample={SAMPLE_ONLY.recommendations} />
       </FadeIn>
 
       <FadeIn delay={120}>

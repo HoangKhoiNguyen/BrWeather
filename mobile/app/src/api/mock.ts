@@ -1,4 +1,5 @@
 // Sample data so the UI can be built before the backend is ready. Everything here is invented.
+import { distanceKm } from '../location';
 import type {
   AlertEvent,
   RecommendationRequest,
@@ -60,27 +61,33 @@ function codeAt(t: number): number {
   return vnHour(t) >= 6 && vnHour(t) <= 17 ? 1 : 2;
 }
 
-const STATIONS: Array<{ id: number; name: string; lat: number; lon: number; km: number; base: number; rel: 'high' | 'medium' | 'low' }> = [
-  { id: 2161292, name: 'Số 46 Lưu Quang Vũ', lat: 21.015, lon: 105.8, km: 1.2, base: 46, rel: 'high' },
-  { id: 4946812, name: 'Công viên Nhân Chính', lat: 21.007, lon: 105.8, km: 2.1, base: 58, rel: 'high' },
-  { id: 4946813, name: 'Số 1 Giải Phóng - Bạch Mai', lat: 21.0, lon: 105.84, km: 4.6, base: 63, rel: 'high' },
-  { id: 2161306, name: 'Minh Khai - Bắc Từ Liêm', lat: 21.07, lon: 105.76, km: 7.3, base: 41, rel: 'medium' },
-  { id: 6123215, name: 'Dragon', lat: 21.03, lon: 105.85, km: 5.5, base: 52, rel: 'medium' },
+const STATIONS: Array<{ id: number; name: string; lat: number; lon: number; base: number; rel: 'high' | 'medium' | 'low' }> = [
+  { id: 2161292, name: 'Số 46 Lưu Quang Vũ', lat: 21.0205, lon: 105.8025, base: 46, rel: 'high' },
+  { id: 4946812, name: 'Công viên Nhân Chính', lat: 21.0055, lon: 105.8035, base: 58, rel: 'high' },
+  { id: 4946813, name: 'Số 1 Giải Phóng - Bạch Mai', lat: 21.0005, lon: 105.8415, base: 63, rel: 'high' },
+  { id: 2161306, name: 'Minh Khai - Bắc Từ Liêm', lat: 21.0705, lon: 105.7595, base: 41, rel: 'medium' },
+  { id: 6123215, name: 'Dragon', lat: 21.032, lon: 105.852, base: 52, rel: 'medium' },
+  { id: 2161317, name: 'Thanh Xuân - Sóc Sơn', lat: 21.2535, lon: 105.8355, base: 38, rel: 'high' },
 ];
 
-export function mockStations(): StationSummary[] {
+// Stations with these states, so every UI state is visible with sample data
+const STALE_ID = 2161306;
+const MISSING_ID = 6123215;
+// Not enough history yet: the detail screen must say "chưa có dự báo"
+const NO_FORECAST_IDS = [MISSING_ID, 2161317];
+
+export function mockStations(lat: number, lon: number): StationSummary[] {
   const now = currentHour();
-  return STATIONS.map((s, i) => {
-    // One stale and one missing station so those UI states are always visible
-    const stale = i === 3;
-    const missing = i === 4;
+  return STATIONS.map((s): StationSummary => {
+    const stale = s.id === STALE_ID;
+    const missing = s.id === MISSING_ID;
     const measured = stale ? now - 6 * HOUR : now;
     return {
       id: s.id,
       name: s.name,
       lat: s.lat,
       lon: s.lon,
-      distanceKm: s.km,
+      distanceKm: Math.round(distanceKm(lat, lon, s.lat, s.lon) * 10) / 10,
       latest: {
         pm25: missing ? null : pm25At(measured, s.base),
         unit: 'µg/m³',
@@ -91,7 +98,7 @@ export function mockStations(): StationSummary[] {
         status: missing ? 'missing' : stale ? 'stale' : 'ok',
       },
     };
-  });
+  }).sort((a, b) => a.distanceKm - b.distanceKm);
 }
 
 export function mockStationDetail(id: number): StationDetail {
@@ -102,6 +109,7 @@ export function mockStationDetail(id: number): StationDetail {
     const t = now - k * HOUR;
     history.push({ time: iso(t), value: k === 9 || k === 10 ? null : pm25At(t, base) });
   }
+  const hasForecast = !NO_FORECAST_IDS.includes(id);
   const forecast: SeriesPoint[] = [];
   for (let k = 1; k <= 24; k++) {
     const t = now + k * HOUR;
@@ -109,9 +117,9 @@ export function mockStationDetail(id: number): StationDetail {
   }
   return {
     history,
-    forecast,
-    forecastIssuedAt: iso(now),
-    modelVersion: 'baseline-persistence (mẫu)',
+    forecast: hasForecast ? forecast : null,
+    forecastIssuedAt: hasForecast ? iso(now) : null,
+    modelVersion: hasForecast ? 'baseline-persistence (mẫu)' : null,
     anomalies: [
       {
         id: 1,
@@ -152,6 +160,7 @@ export function mockWeather(): Weather {
   return {
     fetchedAt: iso(now),
     source: 'Open-Meteo',
+    kind: 'modelled',
     current: {
       temperatureC: temperatureAt(now),
       apparentC: temperatureAt(now) + 1,

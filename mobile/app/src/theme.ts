@@ -32,6 +32,8 @@ export const pmColors = {
   moderate: '#FACC15',
   high: '#FB923C',
   veryHigh: '#F87171',
+  veryBad: '#C084FC',
+  hazardous: '#D97757',
   none: '#CBD5E1',
 };
 
@@ -44,9 +46,29 @@ export const tempRamp = 'linear-gradient(90deg, #7DD3FC 0%, #FDE68A 55%, #FB923C
 
 export const PM_SCALE_MAX = 150;
 
+// Level names and PM2.5 band edges (25 / 50 / 80 / 150 / 250 µg/m³) follow the PM2.5 breakpoints of VN_AQI.
+// The app shows the hourly reading against these bands; it does not compute an official AQI.
+export const PM_SCALE_NAME = 'Mức tham khảo theo ngưỡng PM2.5 của VN_AQI (QĐ 1459/QĐ-TCMT)';
+
+// A station further than this from the chosen place may not represent the air there (T2.1-4)
+export const FAR_STATION_KM = 10;
+
+// Data older than this is labelled "cũ" (to be tuned once the real update frequency is measured)
+export const STALE_HOURS = 3;
+
+export function isStale(iso: string | null, hours = STALE_HOURS): boolean {
+  return iso === null || Date.now() - new Date(iso).getTime() > hours * 3600 * 1000;
+}
+
 export function pm25Level(v: number | null): { label: string; color: string; advice: string } {
   if (v === null) {
     return { label: 'Không có dữ liệu', color: pmColors.none, advice: 'Chưa có số đo mới tại trạm này.' };
+  }
+  if (v > 250) {
+    return { label: 'Nguy hại', color: pmColors.hazardous, advice: 'Ở trong nhà, đóng cửa, theo dõi sức khỏe.' };
+  }
+  if (v > 150) {
+    return { label: 'Rất xấu', color: pmColors.veryBad, advice: 'Tránh mọi hoạt động ngoài trời.' };
   }
   if (v <= 25) {
     return { label: 'Tốt', color: pmColors.good, advice: 'Phù hợp cho mọi hoạt động ngoài trời.' };

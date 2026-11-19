@@ -35,9 +35,10 @@ export interface Anomaly {
 
 export interface StationDetail {
   history: SeriesPoint[];
-  forecast: SeriesPoint[];
-  forecastIssuedAt: string;
-  modelVersion: string;
+  // null when the station does not have enough history for a forecast (T3.1-5)
+  forecast: SeriesPoint[] | null;
+  forecastIssuedAt: string | null;
+  modelVersion: string | null;
   anomalies: Anomaly[];
 }
 
@@ -59,6 +60,8 @@ export interface WeatherDay {
 export interface Weather {
   fetchedAt: string;
   source: string;
+  // Open-Meteo values come from a weather model, never from a station measurement
+  kind: DataKind;
   current: {
     temperatureC: number | null;
     apparentC: number | null;

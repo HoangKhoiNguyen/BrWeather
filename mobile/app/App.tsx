@@ -6,7 +6,9 @@ import { getWeather } from './src/api/client';
 import type { StationSummary } from './src/api/types';
 import { FadeIn } from './src/components/anim';
 import { SkyBackground } from './src/components/sky';
+import { LocationProvider, useLocation } from './src/location';
 import AlertsScreen from './src/screens/AlertsScreen';
+import LocationScreen from './src/screens/LocationScreen';
 import OverviewScreen from './src/screens/OverviewScreen';
 import PlannerScreen from './src/screens/PlannerScreen';
 import StationDetailScreen from './src/screens/StationDetailScreen';
@@ -59,18 +61,28 @@ function TabBar({ tab, onSelect, bottom }: { tab: Tab; onSelect: (t: Tab) => voi
 
 function Main() {
   const insets = useSafeAreaInsets();
+  const { place } = useLocation();
   const [tab, setTab] = useState<Tab>('overview');
   const [station, setStation] = useState<StationSummary | null>(null);
+  const [pickingPlace, setPickingPlace] = useState(false);
   const [sky, setSky] = useState<SkyKind>('clear-day');
 
   // The whole app sits under a sky that follows the current weather and time of day
   useEffect(() => {
-    getWeather().then(w => setSky(skyFor(w.current.weatherCode, w.fetchedAt)));
-  }, []);
+    getWeather(place.lat, place.lon).then(
+      w => setSky(skyFor(w.current.weatherCode, w.fetchedAt)),
+      // No weather for this place: still pick day or night from the clock
+      () => setSky(skyFor(null, new Date().toISOString())),
+    );
+  }, [place]);
 
-  // Android back button leaves the station detail instead of closing the app
+  // Android back button closes the station detail or place picker instead of the app
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (pickingPlace) {
+        setPickingPlace(false);
+        return true;
+      }
       if (station) {
         setStation(null);
         return true;
@@ -78,24 +90,27 @@ function Main() {
       return false;
     });
     return () => sub.remove();
-  }, [station]);
+  }, [station, pickingPlace]);
 
   const selectTab = (id: Tab) => {
     setStation(null);
+    setPickingPlace(false);
     setTab(id);
   };
 
-  const screenKey = station ? `station-${station.id}` : tab;
+  const screenKey = pickingPlace ? 'place' : station ? `station-${station.id}` : tab;
 
   return (
     <View style={styles.root}>
       <SkyBackground kind={sky} />
       <View style={[styles.content, { paddingTop: insets.top }]}>
         <FadeIn key={screenKey} style={styles.content}>
-          {station ? (
+          {pickingPlace ? (
+            <LocationScreen onDone={() => setPickingPlace(false)} />
+          ) : station ? (
             <StationDetailScreen station={station} onBack={() => setStation(null)} />
           ) : tab === 'overview' ? (
-            <OverviewScreen onOpen={setStation} />
+            <OverviewScreen onOpen={setStation} onPickPlace={() => setPickingPlace(true)} />
           ) : tab === 'weather' ? (
             <WeatherScreen />
           ) : tab === 'planner' ? (
@@ -114,7 +129,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="light-content" />
-      <Main />
+      <LocationProvider>
+        <Main />
+      </LocationProvider>
     </SafeAreaProvider>
   );
 }
