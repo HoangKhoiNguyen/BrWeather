@@ -43,7 +43,17 @@ CREATE TABLE IF NOT EXISTS weather_snapshots (
     lat           DOUBLE PRECISION NOT NULL,
     lon           DOUBLE PRECISION NOT NULL,
     fetched_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    source        TEXT NOT NULL DEFAULT 'open-meteo'
+    source        TEXT NOT NULL DEFAULT 'open-meteo',
+    -- Open-Meteo "current" block at fetch time (migration 001). NULL when the response had no value.
+    current_valid_time             TIMESTAMPTZ,
+    current_temperature_c          DOUBLE PRECISION,
+    current_apparent_temperature_c DOUBLE PRECISION,
+    current_humidity_pct           DOUBLE PRECISION,
+    current_precipitation_mm       DOUBLE PRECISION,
+    current_weather_code           INTEGER,
+    current_wind_speed_kmh         DOUBLE PRECISION,
+    current_wind_direction_deg     DOUBLE PRECISION,
+    current_uv_index               DOUBLE PRECISION
 );
 
 CREATE TABLE IF NOT EXISTS weather_hourly (
