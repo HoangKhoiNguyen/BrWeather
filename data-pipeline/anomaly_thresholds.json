@@ -1,0 +1,25 @@
+{
+  "detector_version": "1.0.0",
+  "sensor_id": 14581375,
+  "technical_min": 0.0,
+  "technical_max": 1000.0,
+  "expected_unit_aliases": ["µg/m³", "μg/m³", "ug/m3", "�g/m�"],
+  "missing_severity_hours": {"INFO": 1, "WATCH": 2, "WARNING": 6, "CRITICAL": 24},
+  "stale_after_hours": 3,
+  "zero_run_hours": 6,
+  "flatline_min_hours": 8,
+  "flatline_max_range": 0.1,
+  "rapid_change_quantile": 0.99,
+  "rapid_change_percent_denominator_min": 5.0,
+  "robust_window_hours": 72,
+  "robust_min_history": 36,
+  "robust_score_quantile": 0.99,
+  "persistence_residual_quantile": 0.99,
+  "quality_context_hours": 24,
+  "split_boundaries_utc": {
+    "train_start": "2026-05-15T09:00:00+00:00",
+    "train_end": "2026-09-01T00:00:00+00:00",
+    "validation_end": "2026-10-27T00:00:00+00:00",
+    "test_end": "2026-11-11T09:00:00+00:00"
+  }
+}
