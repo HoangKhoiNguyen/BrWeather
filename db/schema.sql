@@ -34,7 +34,10 @@ CREATE TABLE IF NOT EXISTS air_measurements (
     kind          TEXT NOT NULL CHECK (kind IN ('observed', 'modelled')),
     quality_flag  TEXT NOT NULL DEFAULT 'ok',  -- ok | out_of_range | flatline | suspect
     fetched_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (source, station_id, parameter, measured_at)
+    PRIMARY KEY (source, station_id, parameter, measured_at),
+    -- migration 004
+    CONSTRAINT air_measurements_quality_flag_check
+        CHECK (quality_flag IN ('ok', 'out_of_range', 'flatline', 'suspect'))
 );
 
 -- Weather snapshots (F09); each fetch keeps its own forecast so evaluation never uses overwritten data
@@ -43,7 +46,19 @@ CREATE TABLE IF NOT EXISTS weather_snapshots (
     lat           DOUBLE PRECISION NOT NULL,
     lon           DOUBLE PRECISION NOT NULL,
     fetched_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    source        TEXT NOT NULL DEFAULT 'open-meteo'
+    source        TEXT NOT NULL DEFAULT 'open-meteo',
+    -- Open-Meteo "current" block at fetch time (migration 001). NULL when the response had no value.
+    current_valid_time             TIMESTAMPTZ,
+    current_temperature_c          DOUBLE PRECISION,
+    current_apparent_temperature_c DOUBLE PRECISION,
+    current_humidity_pct           DOUBLE PRECISION,
+    current_precipitation_mm       DOUBLE PRECISION,
+    current_weather_code           INTEGER,
+    current_wind_speed_kmh         DOUBLE PRECISION,
+    current_wind_direction_deg     DOUBLE PRECISION,
+    current_uv_index               DOUBLE PRECISION,
+    -- Bản ghi thô (raw_payloads) của đúng lượt lấy này, để truy nguồn gốc (migration 002)
+    raw_payload_id                 BIGINT REFERENCES raw_payloads(id)
 );
 
 CREATE TABLE IF NOT EXISTS weather_hourly (
@@ -68,6 +83,7 @@ CREATE TABLE IF NOT EXISTS weather_daily (
     temperature_max_c  DOUBLE PRECISION,
     temperature_min_c  DOUBLE PRECISION,
     precipitation_sum_mm DOUBLE PRECISION,
+    precipitation_prob_max_pct DOUBLE PRECISION,   -- khả năng mưa cao nhất trong ngày (migration 003)
     weather_code       INTEGER,
     sunrise            TIMESTAMPTZ,
     sunset             TIMESTAMPTZ,
@@ -79,7 +95,8 @@ CREATE TABLE IF NOT EXISTS reliability_scores (
     station_id   BIGINT REFERENCES stations(id),
     computed_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     level        TEXT NOT NULL CHECK (level IN ('high', 'medium', 'low')),
-    reasons      JSONB NOT NULL DEFAULT '[]',
+    reasons      JSONB NOT NULL DEFAULT '[]',     -- mã lý do: out_of_range | flatline | stale | neighbour_deviation
+    details      JSONB NOT NULL DEFAULT '{}',     -- số liệu dẫn tới kết luận (migration 007)
     PRIMARY KEY (station_id, computed_at)
 );
 
@@ -102,7 +119,15 @@ CREATE TABLE IF NOT EXISTS anomalies (
     category     TEXT NOT NULL CHECK (category IN ('data', 'environment', 'needs_review')),
     description  TEXT NOT NULL,
     detected_by  TEXT NOT NULL,
-    reviewed     BOOLEAN NOT NULL DEFAULT FALSE
+    reviewed     BOOLEAN NOT NULL DEFAULT FALSE,
+    -- migration 009 (T5.1-1, T5.2-1)
+    direction      TEXT CONSTRAINT anomalies_direction_check CHECK (direction IS NULL OR direction IN ('up', 'down')),
+    peak_time      TIMESTAMPTZ,
+    peak_value     DOUBLE PRECISION,
+    baseline_value DOUBLE PRECISION,
+    score          DOUBLE PRECISION,
+    details        JSONB NOT NULL DEFAULT '{}',
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Anonymous devices and alerts (F07a, F11)
@@ -139,7 +164,12 @@ CREATE TABLE IF NOT EXISTS ingest_runs (
     job         TEXT NOT NULL,
     started_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     finished_at TIMESTAMPTZ,
-    status      TEXT NOT NULL DEFAULT 'running',  -- running | success | failed
+    status      TEXT NOT NULL DEFAULT 'running',  -- running | success | partial | failed
     records     INTEGER NOT NULL DEFAULT 0,
-    error       TEXT
+    error       TEXT,
+    -- Lỗi từng trạm/bước: [{"station_id", "stage", "kind": "source"|"internal", "message"}] (migration 008)
+    errors      JSONB NOT NULL DEFAULT '[]'
 );
+
+-- View, hàm và trigger (v_weather_current_latest, v_pm25_latest, pm25_hourly_series, ...)
+-- nằm trong db/migrations/ vì chúng dùng cột do migration thêm vào; xem db/migrations/README.md.

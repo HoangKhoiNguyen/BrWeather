@@ -16,9 +16,10 @@ class Settings:
     db_dsn: str
 
 
-def load_settings() -> Settings:
+def load_settings(require_openaq_key: bool = True) -> Settings:
+    """require_openaq_key=False for jobs that only read/write the database (reports, reliability)."""
     key = os.environ.get("OPENAQ_API_KEY", "")
-    if not key:
+    if not key and require_openaq_key:
         raise RuntimeError("OPENAQ_API_KEY is not set. Copy .env.example to .env and add your own key.")
     ids = [int(x) for x in os.environ.get("ACTIVE_STATION_IDS", "").split(",") if x.strip()]
     dsn = (
