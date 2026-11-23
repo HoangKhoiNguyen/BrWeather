@@ -34,7 +34,10 @@ CREATE TABLE IF NOT EXISTS air_measurements (
     kind          TEXT NOT NULL CHECK (kind IN ('observed', 'modelled')),
     quality_flag  TEXT NOT NULL DEFAULT 'ok',  -- ok | out_of_range | flatline | suspect
     fetched_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (source, station_id, parameter, measured_at)
+    PRIMARY KEY (source, station_id, parameter, measured_at),
+    -- migration 004
+    CONSTRAINT air_measurements_quality_flag_check
+        CHECK (quality_flag IN ('ok', 'out_of_range', 'flatline', 'suspect'))
 );
 
 -- Weather snapshots (F09); each fetch keeps its own forecast so evaluation never uses overwritten data
@@ -53,7 +56,9 @@ CREATE TABLE IF NOT EXISTS weather_snapshots (
     current_weather_code           INTEGER,
     current_wind_speed_kmh         DOUBLE PRECISION,
     current_wind_direction_deg     DOUBLE PRECISION,
-    current_uv_index               DOUBLE PRECISION
+    current_uv_index               DOUBLE PRECISION,
+    -- Bản ghi thô (raw_payloads) của đúng lượt lấy này, để truy nguồn gốc (migration 002)
+    raw_payload_id                 BIGINT REFERENCES raw_payloads(id)
 );
 
 CREATE TABLE IF NOT EXISTS weather_hourly (
@@ -78,6 +83,7 @@ CREATE TABLE IF NOT EXISTS weather_daily (
     temperature_max_c  DOUBLE PRECISION,
     temperature_min_c  DOUBLE PRECISION,
     precipitation_sum_mm DOUBLE PRECISION,
+    precipitation_prob_max_pct DOUBLE PRECISION,   -- khả năng mưa cao nhất trong ngày (migration 003)
     weather_code       INTEGER,
     sunrise            TIMESTAMPTZ,
     sunset             TIMESTAMPTZ,
@@ -89,7 +95,8 @@ CREATE TABLE IF NOT EXISTS reliability_scores (
     station_id   BIGINT REFERENCES stations(id),
     computed_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     level        TEXT NOT NULL CHECK (level IN ('high', 'medium', 'low')),
-    reasons      JSONB NOT NULL DEFAULT '[]',
+    reasons      JSONB NOT NULL DEFAULT '[]',     -- mã lý do: out_of_range | flatline | stale | neighbour_deviation
+    details      JSONB NOT NULL DEFAULT '{}',     -- số liệu dẫn tới kết luận (migration 007)
     PRIMARY KEY (station_id, computed_at)
 );
 
@@ -149,7 +156,12 @@ CREATE TABLE IF NOT EXISTS ingest_runs (
     job         TEXT NOT NULL,
     started_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     finished_at TIMESTAMPTZ,
-    status      TEXT NOT NULL DEFAULT 'running',  -- running | success | failed
+    status      TEXT NOT NULL DEFAULT 'running',  -- running | success | partial | failed
     records     INTEGER NOT NULL DEFAULT 0,
-    error       TEXT
+    error       TEXT,
+    -- Lỗi từng trạm/bước: [{"station_id", "stage", "kind": "source"|"internal", "message"}] (migration 008)
+    errors      JSONB NOT NULL DEFAULT '[]'
 );
+
+-- View, hàm và trigger (v_weather_current_latest, v_pm25_latest, pm25_hourly_series, ...)
+-- nằm trong db/migrations/ vì chúng dùng cột do migration thêm vào; xem db/migrations/README.md.

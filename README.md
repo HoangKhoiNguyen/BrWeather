@@ -31,7 +31,11 @@
    cd data-pipeline
    pip install -e ".[dev]"
    python -m brweather_data.jobs.ingest_hourly
+   python -m brweather_data.jobs.compute_reliability      # mức tin cậy mỗi trạm (scheduler chạy sau ingest)
+   python -m brweather_data.jobs.backfill_pm25 --days 14  # lịch sử PM2.5
+   python -m brweather_data.jobs.data_report runs         # xem lượt chạy (cũng có: weather, pm25)
    ```
+   Chi tiết các job dữ liệu và cách kiểm tra: `docs/data-tasks-sprint1-2.md`.
 5. Chạy app: xem `mobile/README.md`.
 
 ## Quy ước làm việc
