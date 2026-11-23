@@ -119,7 +119,15 @@ CREATE TABLE IF NOT EXISTS anomalies (
     category     TEXT NOT NULL CHECK (category IN ('data', 'environment', 'needs_review')),
     description  TEXT NOT NULL,
     detected_by  TEXT NOT NULL,
-    reviewed     BOOLEAN NOT NULL DEFAULT FALSE
+    reviewed     BOOLEAN NOT NULL DEFAULT FALSE,
+    -- migration 009 (T5.1-1, T5.2-1)
+    direction      TEXT CONSTRAINT anomalies_direction_check CHECK (direction IS NULL OR direction IN ('up', 'down')),
+    peak_time      TIMESTAMPTZ,
+    peak_value     DOUBLE PRECISION,
+    baseline_value DOUBLE PRECISION,
+    score          DOUBLE PRECISION,
+    details        JSONB NOT NULL DEFAULT '{}',
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Anonymous devices and alerts (F07a, F11)

@@ -1,4 +1,4 @@
-"""Minimal scheduler: at minute 10 of every hour, ingest then compute reliability. Enough for the demo scale.
+"""Minimal scheduler: at minute 10 of every hour, ingest, compute reliability, then detect anomalies. Enough for the demo scale.
 
 Each job logs its own run in ingest_runs; one failing job does not stop the other or the next hour.
 """
@@ -6,13 +6,14 @@ import logging
 import time
 from datetime import datetime, timedelta
 
-from brweather_data.jobs import compute_reliability, ingest_hourly
+from brweather_data.jobs import compute_reliability, detect_anomalies, ingest_hourly
 
 log = logging.getLogger("scheduler")
 
 HOURLY_JOBS = (
     ("ingest_hourly", ingest_hourly.run),
     ("compute_reliability", compute_reliability.run),  # T4.1-3: after ingest, on the fresh data
+    ("detect_anomalies", detect_anomalies.run),        # T5.1-1: after reliability, so flatline flags exist
 )
 
 
