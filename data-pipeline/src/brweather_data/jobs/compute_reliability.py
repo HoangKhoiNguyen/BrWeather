@@ -17,6 +17,7 @@ from psycopg.types.json import Jsonb
 from brweather_data import db
 from brweather_data.config import load_settings
 from brweather_data.jobs.ingest_hourly import error_entry, run_status
+from brweather_data.quality.reliability_text import messages
 from brweather_data.quality.reliability import FLATLINE_HOURS, Reading, assess, flatline_length, neighbour_values
 
 log = logging.getLogger("compute_reliability")
@@ -86,6 +87,7 @@ def run(now: datetime | None = None) -> int:
                 neighbours = neighbour_values(reading, readings)
                 level, reasons, details = assess(
                     inp["values"], inp["last_measured"], now, neighbours, latest_value=inp["latest_value"])
+                details.update(messages(level, reasons, details))  # T4.1-4: sentences shown in the app
                 with conn.cursor() as cur:
                     cur.execute(
                         "INSERT INTO reliability_scores (station_id, computed_at, level, reasons, details)"

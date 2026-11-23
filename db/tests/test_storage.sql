@@ -186,5 +186,25 @@ BEGIN
     IF n <> 1 THEN RAISE EXCEPTION 'T2.1-1: cột errors không đọc được'; END IF;
 END $$;
 
+
+-- ---------------------------------------------------------------- T5.1-1: sự kiện bất thường không trùng
+DO $$
+BEGIN
+    INSERT INTO anomalies (station_id, start_time, end_time, category, description, detected_by, direction, details)
+    VALUES (980001, '2026-11-20 03:00+00', '2026-11-20 05:00+00', 'environment', 'test', 'robust_z_v1', 'up', '{"reason": "neighbour_confirms"}');
+    BEGIN
+        INSERT INTO anomalies (station_id, start_time, end_time, category, description, detected_by)
+        VALUES (980001, '2026-11-20 03:00+00', '2026-11-20 04:00+00', 'data', 'dup', 'robust_z_v1');
+        RAISE EXCEPTION 'T5.1-1: sự kiện trùng (trạm, bộ phát hiện, giờ bắt đầu) phải bị chặn';
+    EXCEPTION WHEN unique_violation THEN NULL;
+    END;
+    BEGIN
+        INSERT INTO anomalies (station_id, start_time, end_time, category, description, detected_by, direction)
+        VALUES (980001, '2026-11-21 03:00+00', '2026-11-21 04:00+00', 'data', 'x', 'robust_z_v1', 'sideways');
+        RAISE EXCEPTION 'T5.1-1: direction lạ phải bị chặn';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+END $$;
+
 \echo 'db/tests/test_storage.sql: tất cả kiểm thử lưu trữ đạt'
 ROLLBACK;

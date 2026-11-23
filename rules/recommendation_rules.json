@@ -1,0 +1,144 @@
+{
+  "version": "2.0.0-draft",
+  "status": "DRAFT - chờ nhóm duyệt (T6.2-1)",
+  "language": "vi",
+  "disclaimer": "Khuyến cáo chung, không thay thế tư vấn y tế.",
+  "notes": [
+    "Ngưỡng PM2.5 là nồng độ µg/m³ (không phải AQI). Các mốc 50/80/150/250 là điểm gãy PM2.5 trong QĐ 1459/QĐ-TCMT, dùng để gắn với các mức khuyến cáo của Bộ Y tế; app không tính và không hiển thị AQI.",
+    "Đầu vào thiếu hoặc cũ (quá 3 giờ với PM2.5) phải truyền null; quy tắc dùng đầu vào null không được đánh giá và chủ đề đó vào danh sách missing_topics.",
+    "Trong mỗi nhóm (group) chỉ quy tắc nặng nhất (severity lớn nhất) được hiển thị.",
+    "Khuyến cáo cho nhóm nhạy cảm (US6.3) làm ở Sprint 4, chưa có trong bản này."
+  ],
+  "inputs": {
+    "pm25_now": "PM2.5 mới nhất dùng được (µg/m³) của trạm gần nhất, không cũ quá 3 giờ",
+    "rain_prob_max_6h": "Khả năng mưa cao nhất trong 6 giờ tới (%)",
+    "rain_sum_12h": "Tổng lượng mưa dự báo 12 giờ tới (mm)",
+    "thunderstorm_6h": "true nếu weather_code 95, 96 hoặc 99 xuất hiện trong 6 giờ tới",
+    "temp_max_today": "Nhiệt độ cao nhất dự báo hôm nay theo giờ Việt Nam (°C)",
+    "uv_max_today": "Chỉ số UV cao nhất dự báo hôm nay"
+  },
+  "sources": {
+    "BYT_AQI_GUIDANCE": {
+      "title": "Khuyến cáo của Bộ Y tế về phòng, chống ảnh hưởng của ô nhiễm không khí tới sức khỏe (theo từng mức AQI)",
+      "issuer": "Bộ Y tế (qua Báo Nhân Dân, Báo Đại biểu Nhân dân)",
+      "url": "https://nhandan.vn/bo-y-te-khuyen-cao-phong-chong-anh-huong-cua-o-nhiem-khong-khi-toi-suc-khoe-post792870.html",
+      "note": "Chưa tìm được văn bản gốc trên cổng Bộ Y tế; cần bổ sung trước khi chốt."
+    },
+    "QD_1459_TCMT": {
+      "title": "Quyết định 1459/QĐ-TCMT - Hướng dẫn kỹ thuật tính toán và công bố chỉ số VN_AQI (điểm gãy PM2.5)",
+      "issuer": "Tổng cục Môi trường",
+      "url": "https://vea.mae.gov.vn/Data/files/QD%201459%20TCMT%20ngay%2012_11_2019%20AQI%281%29.pdf"
+    },
+    "QCVN_05_2023": {
+      "title": "QCVN 05:2023/BTNMT - PM2.5 trung bình 24 giờ 50 µg/m³ (45 µg/m³ từ 01/01/2026), trung bình năm 25 µg/m³",
+      "issuer": "Bộ Tài nguyên và Môi trường",
+      "url": "https://tnmt.langson.gov.vn/upload/105376/20240404/01-btnmt-qc05_22dbf.pdf"
+    },
+    "WHO_AQG_2021": {
+      "title": "WHO Global Air Quality Guidelines 2021 - PM2.5: 15 µg/m³ (24 giờ), 5 µg/m³ (năm)",
+      "issuer": "World Health Organization",
+      "url": "https://www.santepubliquefrance.fr/en/les-actualites/air-pollution-who-revises-its-guideline-values-major-air-pollutants"
+    },
+    "WHO_UV_INDEX": {
+      "title": "Radiation: The ultraviolet (UV) index",
+      "issuer": "World Health Organization",
+      "url": "https://www.who.int/news-room/q-a-detail/radiation-the-ultraviolet-(uv)-index"
+    },
+    "QD_18_2021": {
+      "title": "Quyết định 18/2021/QĐ-TTg (ngưỡng nắng nóng, mưa) - xem docs/weather-thresholds.md (SP-04)",
+      "issuer": "Thủ tướng Chính phủ",
+      "url": "https://vupc.mae.gov.vn/Data/files/18_2021_QD-TTg.doc"
+    },
+    "PO_RAIN_50": {
+      "title": "Product backlog, Phụ lục C: khả năng mưa khuyên mang áo mưa 50%",
+      "issuer": "brWeather (ngưỡng nhóm chọn)",
+      "url": "brWeather/product-backlog.md"
+    }
+  },
+  "rules": [
+    {
+      "id": "PM_MASK", "topic": "air", "group": "pm_mask", "severity": 1,
+      "when": {"input": "pm25_now", "op": ">", "value": 50},
+      "message": "Đeo khẩu trang đạt chuẩn, đeo đúng cách khi ra ngoài.",
+      "evidence": "PM2.5 hiện tại {value} µg/m³, trên mức 50 µg/m³.",
+      "sources": ["BYT_AQI_GUIDANCE", "QD_1459_TCMT", "QCVN_05_2023"]
+    },
+    {
+      "id": "PM_LIMIT_OUTDOOR", "topic": "air", "group": "pm_activity", "severity": 1,
+      "when": {"input": "pm25_now", "op": ">", "value": 80},
+      "message": "Hạn chế hoạt động ngoài trời, chọn thời điểm ít ô nhiễm hơn. Nếu khó thở, ho, sốt, hãy đến cơ sở y tế.",
+      "evidence": "PM2.5 hiện tại {value} µg/m³, trên mức 80 µg/m³.",
+      "sources": ["BYT_AQI_GUIDANCE", "QD_1459_TCMT"]
+    },
+    {
+      "id": "PM_MINIMIZE_OUTDOOR", "topic": "air", "group": "pm_activity", "severity": 2,
+      "when": {"input": "pm25_now", "op": ">", "value": 150},
+      "message": "Hạn chế tối đa hoạt động ngoài trời; đóng cửa sổ nếu ở gần nơi ô nhiễm. Nếu khó thở, ho, sốt, hãy đến cơ sở y tế.",
+      "evidence": "PM2.5 hiện tại {value} µg/m³, trên mức 150 µg/m³.",
+      "sources": ["BYT_AQI_GUIDANCE", "QD_1459_TCMT"]
+    },
+    {
+      "id": "PM_AVOID_OUTDOOR", "topic": "air", "group": "pm_activity", "severity": 3,
+      "when": {"input": "pm25_now", "op": ">", "value": 250},
+      "message": "Tránh các hoạt động ngoài trời, chuyển sang hoạt động trong nhà. Nếu khó thở, ho, sốt, hãy đến cơ sở y tế.",
+      "evidence": "PM2.5 hiện tại {value} µg/m³, trên mức 250 µg/m³.",
+      "sources": ["BYT_AQI_GUIDANCE", "QD_1459_TCMT"]
+    },
+    {
+      "id": "RAIN_COAT", "topic": "rain", "group": "rain", "severity": 1,
+      "when": {"input": "rain_prob_max_6h", "op": ">=", "value": 50},
+      "message": "Mang theo áo mưa.",
+      "evidence": "Khả năng có mưa trong 6 giờ tới lên tới {value}%.",
+      "sources": ["PO_RAIN_50"]
+    },
+    {
+      "id": "RAIN_HEAVY", "topic": "rain", "group": "rain_heavy", "severity": 1,
+      "when": {"input": "rain_sum_12h", "op": ">", "value": 25},
+      "message": "Có thể mưa to: mang áo mưa, hạn chế đi lại nếu không cần thiết.",
+      "evidence": "Dự báo tổng lượng mưa 12 giờ tới {value} mm, trên mức 25 mm.",
+      "sources": ["QD_18_2021"]
+    },
+    {
+      "id": "THUNDERSTORM", "topic": "rain", "group": "thunderstorm", "severity": 1,
+      "when": {"input": "thunderstorm_6h", "op": "==", "value": true},
+      "message": "Có thể có dông: hạn chế ra ngoài và tránh trú dưới cây cao khi có dông.",
+      "evidence": "Dự báo có dông trong 6 giờ tới.",
+      "sources": ["QD_18_2021"]
+    },
+    {
+      "id": "HEAT", "topic": "heat", "group": "heat", "severity": 1,
+      "when": {"input": "temp_max_today", "op": ">", "value": 35},
+      "message": "Nắng nóng: tránh ra ngoài giờ trưa, uống đủ nước, che nắng.",
+      "evidence": "Nhiệt độ cao nhất hôm nay dự báo {value}°C, trên mức 35°C.",
+      "sources": ["QD_18_2021"]
+    },
+    {
+      "id": "HEAT_SEVERE", "topic": "heat", "group": "heat", "severity": 2,
+      "when": {"input": "temp_max_today", "op": ">=", "value": 37},
+      "message": "Nắng nóng gay gắt: tránh ra ngoài giờ trưa, uống đủ nước, che nắng; chú ý người già và trẻ nhỏ.",
+      "evidence": "Nhiệt độ cao nhất hôm nay dự báo {value}°C, từ 37°C trở lên.",
+      "sources": ["QD_18_2021"]
+    },
+    {
+      "id": "HEAT_EXTREME", "topic": "heat", "group": "heat", "severity": 3,
+      "when": {"input": "temp_max_today", "op": ">=", "value": 39},
+      "message": "Nắng nóng đặc biệt gay gắt: hạn chế ra ngoài từ trưa đến chiều, uống đủ nước, che nắng; chú ý người già và trẻ nhỏ.",
+      "evidence": "Nhiệt độ cao nhất hôm nay dự báo {value}°C, từ 39°C trở lên.",
+      "sources": ["QD_18_2021"]
+    },
+    {
+      "id": "UV_PROTECT", "topic": "uv", "group": "uv", "severity": 1,
+      "when": {"input": "uv_max_today", "op": ">=", "value": 3},
+      "message": "Che nắng khi ra ngoài: áo dài tay, mũ, kem chống nắng; tìm bóng râm buổi trưa.",
+      "evidence": "Chỉ số UV cao nhất hôm nay dự báo {value}, từ 3 trở lên.",
+      "sources": ["WHO_UV_INDEX"]
+    },
+    {
+      "id": "UV_AVOID_MIDDAY", "topic": "uv", "group": "uv", "severity": 2,
+      "when": {"input": "uv_max_today", "op": ">=", "value": 8},
+      "message": "Tránh ra ngoài giữa trưa và tìm bóng râm; áo, kem chống nắng và mũ là cần thiết.",
+      "evidence": "Chỉ số UV cao nhất hôm nay dự báo {value}, từ 8 trở lên.",
+      "sources": ["WHO_UV_INDEX"]
+    }
+  ]
+}

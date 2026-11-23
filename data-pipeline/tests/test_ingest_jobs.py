@@ -188,4 +188,4 @@ def test_scheduler_runs_next_job_when_one_fails():
 
 
 def test_scheduler_includes_reliability_after_ingest():
-    assert [name for name, _ in scheduler.HOURLY_JOBS] == ["ingest_hourly", "compute_reliability"]
+    assert [name for name, _ in scheduler.HOURLY_JOBS] == ["ingest_hourly", "compute_reliability", "detect_anomalies"]

@@ -39,5 +39,6 @@ ALTER TABLE weather_snapshots ADD COLUMN IF NOT EXISTS raw_payload_id BIGINT REF
 | `006_pm25_hourly_series.sql` | T2.3-2 | Hàm `pm25_hourly_series(station, from, to)`: đủ lịch giờ, giờ thiếu NULL |
 | `007_reliability_details.sql` | T4.1-3 | Cột `details` của `reliability_scores`; view `v_reliability_latest` |
 | `008_ingest_run_errors.sql` | T2.1-1, C-06 | Cột `errors` của `ingest_runs` (lỗi nguồn / lỗi nội bộ theo trạm) |
+| `009_anomaly_events.sql` | T5.1-1, T5.2-1 | Cột hướng, đỉnh, trung vị nền, điểm z, `details` cho `anomalies`; khóa chống trùng sự kiện |
 
 Kiểm thử: `bash db/tests/run.sh` (CI chạy sau migration). Các file `db/tests/test_*.sql` tự ROLLBACK, không để lại dữ liệu.
