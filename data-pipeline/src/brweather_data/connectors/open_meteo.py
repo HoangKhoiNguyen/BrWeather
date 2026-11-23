@@ -32,6 +32,7 @@ DAILY_WEATHER = [
     "temperature_2m_max",
     "temperature_2m_min",
     "precipitation_sum",
+    "precipitation_probability_max",
     "weather_code",
     "sunrise",
     "sunset",

@@ -66,3 +66,5 @@ jobs:
         run: bash scripts/db/migrate.sh
       - name: Re-run migrations (must be idempotent)
         run: bash scripts/db/migrate.sh
+      - name: Storage tests (dedup, hourly series, append-only forecasts, latest views)
+        run: bash db/tests/run.sh
